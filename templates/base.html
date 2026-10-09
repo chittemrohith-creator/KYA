@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CivicSync{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="topnav">
+  <a class="brand" href="/">🏛️ CivicSync</a>
+  <div class="links">
+    <a href="/projects">Projects</a>
+    <a href="/map">Map</a>
+    <a href="/departments">Departments</a>
+    <a href="/coordination">Coordination Hub</a>
+    <a href="/citizen-reports">Citizen Reports</a>
+    <a href="/joint-schedules">Joint Schedules</a>
+    <a href="/about">About</a>
+  </div>
+  <div class="auth">
+    {% if current_user_obj %}
+      {% if current_user_obj.role in ('employee','dept_head') %}<a href="/workspace">Workspace</a>
+      {% elif current_user_obj.role == 'chairman' %}<a href="/chairman">Chairman Console</a>
+      {% elif current_user_obj.role == 'admin' %}<a href="/admin">Admin</a>
+      {% else %}<a href="/dashboard">Dashboard</a>{% endif %}
+      <form method="post" action="/logout" style="display:inline"><button class="linklike">Log out</button></form>
+    {% else %}
+      <a href="/login">Citizen Login</a>
+      <a href="/signup">Sign up</a>
+      <a href="/employee/login">Official Login</a>
+    {% endif %}
+  </div>
+</nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer>
+  <p>CivicSync — public coordination layer for municipal public works. Official information is verified; citizen voice is separate.</p>
+</footer>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
