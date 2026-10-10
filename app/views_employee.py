@@ -54,12 +54,17 @@ def new_project():
                 raise BusinessRuleError("Projects cannot be created without a location (rule 1).")
             if not f.get("start_date") or not f.get("end_date"):
                 raise BusinessRuleError("Projects cannot be created without start and end dates (rule 2).")
+            lat, lon = services.validate_coordinates(f["latitude"], f["longitude"], required=True)
+            if date.fromisoformat(f["end_date"]) < date.fromisoformat(f["start_date"]):
+                raise BusinessRuleError("End date must not precede start date.")
+            if not f.get("title", "").strip():
+                raise BusinessRuleError("Title is required.")
             p = Project(
                 title=f["title"].strip(), description=f.get("description", ""),
                 department_id=u.department_id, category=f.get("category", "road"),
                 contractor_name=f.get("contractor_name", ""), budget=f.get("budget") or None,
                 start_date=date.fromisoformat(f["start_date"]), end_date=date.fromisoformat(f["end_date"]),
-                latitude=float(f["latitude"]), longitude=float(f["longitude"]),
+                latitude=lat, longitude=lon,
                 address=f.get("address", ""), ward=f.get("ward", ""), road_name=f.get("road_name", ""),
                 status="draft", created_by=u.id,
             )
@@ -70,7 +75,7 @@ def new_project():
                 services.submit_project(p, u, request=request)
             db.session.commit()
             return redirect(url_for("employee.project_detail", pid=p.id))
-        except BusinessRuleError as e:
+        except (BusinessRuleError, ValueError, KeyError) as e:
             db.session.rollback()
             error = str(e)
     return render_template("workspace/project_new.html", error=error)
@@ -96,11 +101,19 @@ def project_detail(pid):
                 services.audit("project.progress_updated", u, "project", p.id,
                                metadata={"progress": p.progress_percentage}, request=request)
             elif action == "complete" and p.status in ("in_progress", "delayed"):
-                if request.form.get("photo_url"):
-                    db.session.add(ProjectPhoto(project_id=p.id, photo_url=request.form["photo_url"],
+                if p.progress_percentage != 100 or not request.form.get("note", "").strip():
+                    raise BusinessRuleError("Completion requires progress 100% and a completion note.")
+                if p.status == "delayed" and not p.delay_reason:
+                    raise BusinessRuleError("Publish a delay reason before completing delayed work.")
+                upload = request.files.get("photo")
+                if upload and upload.filename:
+                    from .uploads import save_image
+                    photo_url = save_image(upload)
+                    db.session.add(ProjectPhoto(project_id=p.id, photo_url=photo_url,
                                                 kind="completion", caption="Completion photo",
                                                 uploaded_by=u.id))
                     db.session.flush()
+                    services.audit("project.photo_uploaded", u, "project", p.id, metadata={"photo_url": photo_url}, request=request)
                 services.complete_project(p, u, request.form.get("note", ""), request=request)
             elif action == "delay_reason" and p.status == "delayed":
                 services.post_delay_reason(p, u, request.form.get("reason", ""), request=request)
@@ -109,6 +122,8 @@ def project_detail(pid):
                     p.start_date = date.fromisoformat(request.form["start_date"])
                 if request.form.get("end_date"):
                     p.end_date = date.fromisoformat(request.form["end_date"])
+                if p.end_date < p.start_date:
+                    raise BusinessRuleError("End date must not precede start date.")
                 db.session.flush()
                 services.detect_conflicts(p)  # conflict detection runs on date/location change
                 services.audit("project.dates_changed", u, "project", p.id, request=request)
@@ -116,7 +131,7 @@ def project_detail(pid):
                 raise BusinessRuleError("Action not allowed from current state.")
             db.session.commit()
             return redirect(url_for("employee.project_detail", pid=p.id))
-        except BusinessRuleError as e:
+        except (BusinessRuleError, ValueError, KeyError) as e:
             db.session.rollback()
             error = str(e)
     photos = ProjectPhoto.query.filter_by(project_id=p.id).all()
@@ -181,7 +196,7 @@ def post_detail(post_id):
                 raise BusinessRuleError("Unknown action.")
             db.session.commit()
             return redirect(url_for("employee.post_detail", post_id=post.id))
-        except BusinessRuleError as e:
+        except (BusinessRuleError, ValueError, KeyError) as e:
             db.session.rollback()
             error = str(e)
     return render_template("workspace/post_detail.html", post=post, error=error)
@@ -214,7 +229,7 @@ def coordination():
     dept_projects = Project.query.filter_by(department_id=u.department_id).all()
     return render_template("workspace/coordination.html", messages=my_msgs, error=error,
                            departments=Department.query.filter(Department.id != u.department_id).all(),
-                           projects=dept_projects, message_types=[t for t in MESSAGE_TYPES if t not in ("conflict_alert", "decision")])
+                           projects=dept_projects, joint_projects=Project.query.filter(Project.status.in_(["pending_chairman", "approved", "in_progress", "delayed"])).all(), message_types=[t for t in MESSAGE_TYPES if t not in ("conflict_alert", "decision")])
 
 
 @bp.route("/reports")
@@ -252,11 +267,15 @@ def notifications():
 def propose_joint():
     u = _me()
     f = request.form
-    pids = [int(x) for x in f.getlist("project_ids")]
-    js = services.propose_joint_schedule(
-        u, pids, f.get("location", ""),
-        date.fromisoformat(f["start_date"]) if f.get("start_date") else None,
-        date.fromisoformat(f["end_date"]) if f.get("end_date") else None,
-        f.get("reason", ""), request=request)
-    db.session.commit()
+    try:
+        pids = [int(x) for x in f.getlist("project_ids")]
+        services.propose_joint_schedule(
+            u, pids, f.get("location", ""),
+            date.fromisoformat(f["start_date"]) if f.get("start_date") else None,
+            date.fromisoformat(f["end_date"]) if f.get("end_date") else None,
+            f.get("reason", ""), request=request)
+        db.session.commit()
+    except (ValueError, KeyError) as exc:
+        db.session.rollback()
+        raise BusinessRuleError("Use valid project IDs and dates.") from exc
     return redirect(url_for("public.joint_schedules"))
