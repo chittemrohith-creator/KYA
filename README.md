@@ -1,3 +1,5 @@
+> Launch status: local demo verified; public deployment is blocked until the requirements in [LAUNCH.md](LAUNCH.md) are completed.
+
 # CivicSync
 
 A public coordination and transparency platform for municipal public works. CivicSync connects verified departments and phone-verified citizens through Municipal Chairman-approved projects, open schedule coordination, private citizen reporting, published delay reasons, and audit logs.
@@ -33,7 +35,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Then open **http://127.0.0.1:5000** in a browser. Stop with `Ctrl+C`.
+Then open **http://127.0.0.1:5001** in a browser. Stop with `Ctrl+C`.
 
 ## Quick start — macOS / Linux
 
@@ -54,7 +56,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Open **http://127.0.0.1:5000**. The server binds to `127.0.0.1:5000` only (see `run.py`) — it is a development server, not a public deployment.
+Open **http://127.0.0.1:5001**. The server binds to `127.0.0.1:5001` only (see `run.py`) — it is a development server, not a public deployment.
 
 ---
 
@@ -156,7 +158,7 @@ The suite (`tests/test_smoke_public.py`, `tests/test_smoke_auth_roles.py`) runs 
 
 ## Troubleshooting
 
-- **`Address already in use` on port 5000** — something else holds the port (macOS AirPlay Receiver uses 5000). Edit the `port=` value in `run.py` or free the port (`Get-NetTCPConnection -LocalPort 5000` / `lsof -i :5000`).
+- **`Address already in use` on port 5001** — something else holds the port (macOS AirPlay Receiver uses 5001). Edit the `port=` value in `run.py` or free the port (`Get-NetTCPConnection -LocalPort 5001` / `lsof -i :5001`).
 - **PowerShell: "cannot be loaded because running scripts is disabled"** — activate failed; run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` once, then re-activate.
 - **`ModuleNotFoundError: flask`** — the venv isn't activated; `pip list` should show Flask. Re-run the activation command for your OS.
 - **Stale/broken data after changing `CIVICSYNC_DATA_SECRET`** — phone hashes were computed with the old key. Delete `civicsync.db` and restart to reseed.
@@ -175,3 +177,27 @@ tests/          pytest smoke tests (isolated temp DB)
 run.py          Development entrypoint
 requirements.txt / requirements-dev.txt
 ```
+
+
+## Local completion build (10 October 2026)
+
+This is a separate local copy; the original source and original demo database were not modified. No public deployment or external geocoding is performed.
+
+From this folder on Windows, run `start-demo.cmd` (or `powershell -ExecutionPolicy Bypass -File .\start-demo.ps1`). It uses the sibling `demo-venv` and defaults to http://127.0.0.1:5001 so an existing demo on 5001 is not interrupted. Pass `-Port 5002` to select another port. It creates its own civicsync.db on first launch. Install dependencies with `uv pip install --python ..\demo-venv\Scripts\python.exe -r requirements.txt -r requirements-dev.txt` if required.
+
+Run tests: `..\demo-venv\Scripts\python.exe -m pytest -q`. Each test uses a separate temporary database.
+
+Citizen reports accept an address / landmark without coordinates; these reports remain visible in the feed, but do not appear on a map. Alternatively click the report map and drag the marker. Coordinate fields are hidden, optional and validated for paired, finite values in range. No guessed coordinates or geocoding are used.
+
+The public map includes layer, status and department filters, optional marker clustering and a density heatmap. Leaflet, plugins and OpenStreetMap tiles require network access. If the library fails, a text list is shown; address-only reports remain possible without the map. Heatmap/clustering gracefully fall back if those optional libraries fail.
+
+Completion proof is a local JPEG, PNG or WebP image, max 5 MB and 20 megapixels, genuinely decoded by Pillow and rewritten as metadata-free JPEG under a random filename. Original filenames, SVG and arbitrary URLs are not accepted as completion proof. The upload route enforces project visibility; only the owning active department can submit proof through its workspace. Completion still requires progress 100% and a nonempty note.
+
+Joint work can be proposed from the workspace coordination screen by an active employee with at least one own-department project. It needs two departments, eligible submitted/active projects, valid dates and every project pair within 200 metres. Chairman review is required.
+
+Admin department edit/delete is audited. Deletion refuses any scalar or JSON-held department reference; historical records are preserved.
+
+Demo credentials: Chairman CH-0001 / chairman123; Admin AD-0001 / admin123; Roads RD-1001 / roads123; Drainage DR-2002 / drainage123. Citizen demo phone +919888888888 uses the local returned demo OTP. These are synthetic fixtures, not real personal data.
+
+### Important boundaries
+Development demonstration only: demo OTP disclosure, default development secrets, demo-grade phone obfuscation, Flask development server, and no production CSRF/rate limiting or SMS provider. Do not expose publicly. Map tiles/libraries are third-party network resources; no address is sent for geocoding. Delay sweep is manual via Chairman console, not a hosted scheduled job. Uploaded files are local and need backup in a real deployment. Real-world browser/device coverage, accessibility audits and production load/security testing are not claimed.
