@@ -1,22 +1,55 @@
-> Launch status: local demo verified; public deployment is blocked until the requirements in [LAUNCH.md](LAUNCH.md) are completed.
-
 # CivicSync
 
-A public coordination and transparency platform for municipal public works. CivicSync connects verified departments and phone-verified citizens through Municipal Chairman-approved projects, open schedule coordination, private citizen reporting, published delay reasons, and audit logs.
+A municipal public-works coordination and transparency platform built with Flask, SQLAlchemy and server-rendered Jinja templates. Verified staff submit projects and official posts, the Municipal Chairman reviews them, and phone-verified citizens can report issues and follow public work.
 
-Built with Flask + SQLAlchemy (SQLite by default). Server-rendered Jinja templates at the repository root (`templates/`, `static/`), JSON API under `/api/*`.
+> **Current status: verified local demo.** The recovered workflow continuation and homepage road-alignment fixes are merged into `main`. Public hosting is **not approved**: the requirements in [LAUNCH.md](LAUNCH.md) remain outstanding, and production startup is intentionally blocked. Do not remove that guard to deploy the demo.
 
----
+## Latest verified update — 10 October 2026
 
-## Supported Python version
+[PR #5](https://github.com/chittemrohith-creator/KYA/pull/5) continues the saved Qwen work on the existing application; it is not a rebuild. The workflow and road-alignment update was merged as commit [`d0c2e2c`](https://github.com/chittemrohith-creator/KYA/commit/d0c2e2c567eb754024e655ce5f3e94ea84f27c82).
 
-**Python 3.12** (tested with 3.12.10). Python 3.10+ should work; 3.9 and older are not tested.
+| Verification | Result |
+|---|---|
+| Independent local regression suite | **113 tests passed**, exit code 0 |
+| GitHub checks for the reviewed PR | **Both test jobs passed** |
+| Jinja template compilation | **All 51 templates compiled** |
+| Uploaded source integrity | All 88 repository files matched the tested local source byte-for-byte |
+| Real-browser checks | Desktop homepage inspected; citizen-report map filtering and heatmap rendering verified |
 
----
+Five `datetime.utcnow()` deprecation warnings remain in recovered tests. Full mobile, accessibility, load/security and complete browser end-to-end validation have **not** been claimed. These results establish a tested local-demo checkpoint, not public-launch approval.
 
-## Quick start — Windows (PowerShell)
+### What changed
 
-Install Python 3.12 and Git first. Run these commands in PowerShell:
+- Homepage roads and building footprints share one coherent **2:1 isometric grid**. Road lanes sit outside building footprints, and the scene moves together so decorative parallax does not misalign it.
+- Public map filters now work through the same API for **layer, department, status, ward and search**. Clustering uses compatible markers; the density heatmap and safe text-list fallback remain available.
+- Public conflict pins omit private pending/draft project names.
+- Address-only citizen reports retain `NULL` coordinates, display truthful labels, and stay off the map. Without a map pin, an address/landmark must contain at least eight characters.
+- Department deletion retains administrator-only access, checks scalar and JSON-held references, and audits blocked deletion attempts. Historical records are not cascaded away.
+- Completion uploads retain genuine Pillow decoding, randomized JPEG names and visibility-controlled media serving. Recovered tests use real image fixtures rather than fake PNG bytes.
+- Delay explanations remain pending until Chairman approval; the recovered tests verify both submission and approved publication.
+- SQLite in-memory URI query variants and portable relative-path handling are repaired.
+
+## Main workflows
+
+**Citizens:** local phone/OTP signup and login, map-picked or address-only reports, public threads, own-report edits/deletion within the allowed 24-hour window, flagging, subscriptions and notifications. Phone values are not displayed on public pages.
+
+**Department employees:** private project/post drafts, submission for Chairman review, progress updates, validated completion-photo proof, coordination messages, joint-work proposals and responses to citizen reports. Pending staff cannot enter the workspace.
+
+**Municipal Chairman:** employee verification, project/post approvals and reasoned rejection, joint-schedule review, conflict handling, delay monitoring and audit review. Delay explanations become public only after approval.
+
+**System Administrator:** department maintenance and audited administration. Administrator access does not grant authority to approve official work.
+
+**Public visitors:** approved projects, departments, published citizen reports, approved joint schedules, coordination information, contractor statistics and filtered map layers. Drafts and pending project detail pages remain private.
+
+## Requirements
+
+- Python **3.12**, independently tested with Python 3.12.10. Python 3.10+ may work but is not established by this verification.
+- Git to clone or update the repository.
+- Network access for Leaflet/plugins and OpenStreetMap tiles. No external address geocoding is performed.
+
+## Quick start — Windows
+
+Run in PowerShell after installing Python and Git:
 
 ```powershell
 git clone https://github.com/chittemrohith-creator/KYA.git
@@ -26,11 +59,23 @@ python -m venv .venv
 .\.venv\Scripts\python.exe run.py
 ```
 
-No environment activation or permanent execution-policy change is required. If `python` is not found but the Windows Python launcher is installed, use `py -3.12 -m venv .venv` instead.
+If `python` is unavailable but the Windows Python launcher is installed, create the environment with `py -3.12 -m venv .venv`.
 
-Open **http://127.0.0.1:5001**. Stop with `Ctrl+C`. After setup, start again with `.\start-demo.cmd`. To use another port, run `.\start-demo.cmd -Port 5002`. This wrapper relaxes script policy only for its own PowerShell process, not your system settings. To run the PowerShell launcher directly, use `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-demo.ps1 -Port 5002`.
+Open **http://127.0.0.1:5001**. Stop with `Ctrl+C`. No environment activation or permanent PowerShell execution-policy change is required.
 
-If you already have a clone, use `git pull --ff-only` from its folder instead of cloning again; do not overwrite local work.
+After the initial setup:
+
+```powershell
+.\start-demo.cmd
+# Optional alternative port:
+.\start-demo.cmd -Port 5002
+```
+
+The wrapper uses this repository's `.venv` and relaxes script policy only for its own process. Alternatively:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-demo.ps1 -Port 5002
+```
 
 ## Quick start — macOS / Linux
 
@@ -42,173 +87,146 @@ python3 -m venv .venv
 ./.venv/bin/python run.py
 ```
 
-Open **http://127.0.0.1:5001**. No activation is required. The server binds to localhost only; this is a development demo, not a public deployment.
+Open **http://127.0.0.1:5001**. The development server binds to localhost; it is not a production WSGI deployment.
 
----
+### Update an existing checkout
 
-## Configuration (environment variables)
+Stop the demo before updating. Preserve local changes and back up any database or uploaded files you need to retain, then run from the repository folder:
 
-All are optional for local development; the app falls back to insecure dev defaults. Set them explicitly if you care about session/data integrity:
+```bash
+git pull --ff-only
+```
+
+If Git reports local changes or diverged history, resolve those deliberately; do not overwrite your work or delete your database just to pull an update. Reinstall requirements with your repository's `.venv` interpreter if dependencies changed, then restart the demo.
+
+## Local configuration
+
+These settings are for the local demo only. Changing environment variables does **not** make the application production-ready.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CIVICSYNC_SECRET` | `dev-login-secret` | Flask `SECRET_KEY` — signs session cookies. |
-| `CIVICSYNC_DATA_SECRET` | `dev-secret-change-me` | Key used to hash/encrypt citizen phone numbers at rest (`app/bootstrap.py` / `app/services.py`). Changing it invalidates existing phone hashes and OTP lookups. |
-| `CIVICSYNC_DB` | `sqlite:///civicsync.db` | SQLAlchemy database URI. Relative SQLite paths are resolved against the repository root, so the working directory does not matter. |
+| `CIVICSYNC_SECRET` | `dev-login-secret` | Signs Flask session cookies. |
+| `CIVICSYNC_DATA_SECRET` | `dev-secret-change-me` | Used by demo phone hashing/obfuscation. Changing it breaks existing phone-hash lookups. This is not production authenticated encryption. |
+| `CIVICSYNC_DB` | `sqlite:///civicsync.db` | Database URI; relative SQLite paths resolve against the repository root. In-memory variants are supported for isolated tests. |
+| `CIVICSYNC_ENV` | `development` | Setting this to `production` intentionally refuses startup; see [LAUNCH.md](LAUNCH.md). |
 
-Examples:
+Never commit real secrets. Default secrets, known demo passwords, demo phone obfuscation and disclosed demo OTPs are unsuitable for public use.
 
-```powershell
-# PowerShell
-$env:CIVICSYNC_SECRET = "a-long-random-string"
-$env:CIVICSYNC_DATA_SECRET = "another-long-random-string"
-$env:CIVICSYNC_DB = "sqlite:///C:/tmp/civicsync-dev.db"
-.\.venv\Scripts\python.exe run.py
+## Demo database and accounts
+
+On startup the demo creates tables and idempotently seeds departments, staff and an MG Road scenario. The default database is `<repo-root>/civicsync.db`; a configured database URI may point elsewhere. Keep local data isolated from real municipal or citizen information.
+
+Staff sign in at `/employee/login` using their employee code or official email:
+
+| Role | Employee code | Demo password | Destination |
+|---|---|---|---|
+| Chairman | `CH-0001` | `chairman123` | `/chairman` |
+| Administrator | `AD-0001` | `admin123` | `/admin` |
+| Roads employee — active | `RD-1001` | `roads123` | `/workspace` |
+| Drainage employee — active | `DR-2002` | `drainage123` | `/workspace` |
+| Water Supply employee — pending | `WT-3003` | `water123` | Login blocked until Chairman approval |
+
+Citizen demo: display name **Priya S**, phone **`+919888888888`**, login at `/login`. Citizens use OTPs, not a seeded password.
+
+**No SMS provider is configured.** Signup/login start endpoints return a `demo_otp` in JSON and the local pages display it. OTPs expire after five minutes with three incorrect attempts allowed. No real SMS is sent. Anyone who could reach this demo could see the returned code—keep it local.
+
+To reset only disposable synthetic demo data, stop the server and identify the configured database first. Back up anything you need, then remove the intended demo database and restart to reseed. Uploaded files are separate from the database and are not reset automatically. Never use this reset procedure on real data.
+
+## Reports, maps and completion proof
+
+### Citizen report location
+
+Choose a location on the report map and drag the marker, or enter an address/landmark of at least eight characters. No typed coordinates are required. Internally supplied coordinates must be paired, finite and in range; none are guessed. Address-only reports remain in the feed but are never assigned fabricated map pins.
+
+### Public map API
+
+Example read-only queries:
+
+```text
+/api/mapdata
+/api/mapdata?kind=official
+/api/mapdata?kind=citizen
+/api/mapdata?kind=project&department=roads&status=approved
+/api/mapdata?kind=project&ward=Ward%2010&q=MG%20Road
 ```
 
-```bash
-# bash
-export CIVICSYNC_SECRET="a-long-random-string"
-export CIVICSYNC_DATA_SECRET="another-long-random-string"
-export CIVICSYNC_DB="sqlite:////tmp/civicsync-dev.db"
-python run.py
-```
+Layer values include `project`, `citizen_report`, `conflict` and `joint`; `official` excludes citizen reports, and `citizen` selects them. Department filters accept a department slug or exact name. Ward and department filters on related pins use publicly visible linked projects; unlinked citizen reports do not gain invented department/ward metadata.
 
-> ⚠️ **The dev-default secrets and the seeded credentials below are unsafe for any public or production deployment.** Never commit real secrets. For anything beyond localhost, use a production WSGI server (gunicorn/waitress), strong random secrets, HTTPS, and a fresh database without demo accounts.
+The API is local. Leaflet, optional clustering/heatmap plugins and map tiles are third-party network resources. If Leaflet is unavailable, mapped records fall back to a safe text list. Address-only reporting is still available. If tiles alone fail, markers and filters remain usable; missing optional plugins disable only their corresponding features.
 
----
+### Completion photo proof
 
-## Database initialization & seeding
+An active owning department can upload JPEG, PNG or WebP proof through its project workspace. Maximum size is **5 MB** and **20 megapixels**. Pillow genuinely decodes the image and rewrites it as JPEG with a randomized filename; the original filename and metadata are discarded. SVG, arbitrary URLs and corrupt image bytes are not accepted as completion proof.
 
-On startup, `create_app()` calls `seed_all()` (`app/__init__.py`):
+Media routes enforce project visibility. Completion requires progress **100%**, a nonempty note and at least one completion photo. Delayed projects also require an approved, published delay explanation.
 
-1. `db.create_all()` creates all tables in the configured SQLite database (created on first run at `<repo-root>/civicsync.db`).
-2. Seeds the six default departments: Roads, Drainage, Water Supply, Electricity, Telecom, Sanitation.
-3. Pre-seeds the **Municipal Chairman** and **System Administrator** accounts (spec §8.3–8.4 — these roles cannot self-register).
-4. Unless `TESTING_SEED_MINIMAL` is set, seeds the **demo scenario**: MG Road Relaying (approved, Roads) vs Storm Drain Repair (pending Chairman approval, Drainage) at the same coordinates → automatic conflict detection posts an orange `conflict_alert` pin and a Coordination Hub message; plus a published official post, a private draft post, a citizen report, and a subscription.
+### Joint work and delays
 
-Seeding is idempotent — existing rows are detected by unique keys and not duplicated. Delete `civicsync.db` to reset to a clean state.
+Joint proposals require at least two departments, eligible projects, at least one project from the proposing employee's department, valid dates and all project pairs within **200 metres**. Chairman review is mandatory. The delay sweep is run manually from the Chairman console; a hosted scheduled job is not configured.
 
----
+## Running tests
 
-## Seeded local-development accounts
-
-These come directly from `seed_all()` / `seed_demo()` in `app/__init__.py`. **Local demo only — do not use anywhere real.**
-
-### Staff login (`/employee/login`, POST JSON to `/api/login/employee`)
-Login accepts either the employee code **or** the official email.
-
-| Role | Code | Email | Password | Notes |
-|---|---|---|---|---|
-| Municipal Chairman | `CH-0001` | chairman@civic.municipality | `chairman123` | Lands on `/chairman` |
-| System Administrator | `AD-0001` | admin@civic.municipality | `admin123` | Lands on `/admin`; cannot approve official work (rule 26) |
-| Employee — Roads (active) | `RD-1001` | ravi@roads.municipality | `roads123` | Lands on `/workspace` |
-| Employee — Drainage (active) | `DR-2002` | sunita@drainage.municipality | `drainage123` | Lands on `/workspace` |
-| Employee — Water Supply (**pending**) | `WT-3003` | amit@water.municipality | `water123` | Login returns **403** until the Chairman approves the account |
-
-### Citizen login (`/login`, phone + OTP)
-Citizens authenticate with a phone number and a 6-digit OTP — there is no seeded citizen password. The seeded demo citizen has display name **Priya S** and phone **`+919888888888`**.
-
-Flow (from `app/views_auth.py`):
-1. `POST /api/signup/citizen/start` `{"phone": "+91..."}` → creates a pending OTP; response includes **`demo_otp`** — the OTP is returned in the JSON instead of being sent by SMS. There is no SMS gateway; no real messages are ever sent.
-2. `POST /api/signup/citizen/verify` `{"otp": "...", "display_name": "..."}` → account active, session logged in.
-3. Login uses the same pattern: `POST /api/login/citizen` then `POST /api/login/citizen/verify`.
-OTPs expire after 5 minutes and allow 3 wrong attempts (`services.OTP_TTL_MINUTES` / `OTP_MAX_ATTEMPTS`).
-
-> The `demo_otp` field in API responses exists only because there is no SMS provider in this build. It is visible to anyone who can reach the server — another reason this must stay local.
-
----
-
-## Running the tests
-
-Install test dependencies (includes runtime deps):
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-```bash
-python -m pytest tests/ -q
-```
-
-PowerShell equivalent:
+Windows:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m pytest tests\ -q
 ```
 
-The suite (`tests/test_smoke_public.py`, `tests/test_smoke_auth_roles.py`) runs against an **isolated temporary SQLite database per test** (`tmp_path` fixture + `TESTING_SEED_MINIMAL` where appropriate) via Flask's test client. It never touches `civicsync.db` and sends no SMS/OTP messages. Coverage: app creation/seeding, all public pages render without missing-template errors, static CSS/JS served, `/api/mapdata` JSON shape and pin colors, staff login (Chairman/Admin/employee), pending-account rejection, role dashboards, anonymous and wrong-role access denial/redirect, API RBAC, and the citizen OTP signup flow using the returned `demo_otp`.
+macOS / Linux:
 
----
+```bash
+./.venv/bin/python -m pip install -r requirements-dev.txt
+./.venv/bin/python -m pytest tests/ -q
+```
+
+Tests use isolated temporary SQLite databases and synthetic accounts; they do not use the demo database or send real SMS. Coverage includes:
+
+- Public pages, authentication, account status and role-based permissions.
+- Citizen report locations, privacy, edit boundaries, flags and subscriptions.
+- Project/post approval, delay reasons, completion proof and joint scheduling.
+- Safe department maintenance, reference protections and auditing.
+- Map filters, public conflict-title privacy and clustering/heatmap wiring.
+- Bright-theme contracts, no-JavaScript reveal fallback, reduced-motion behavior and shared isometric road/building geometry.
+- The production-startup refusal guard.
+
+The current verified checkpoint is **113 passing tests**. Automated tests and the limited browser checks above do not replace a complete production security/accessibility review.
+
+## UI and accessibility boundaries
+
+The interface uses a light warm-white canvas, sky-blue/teal accents, system fonts and rounded cards. Homepage decorative parallax, card tilt and reveal effects are progressive enhancements; server-rendered content remains visible without JavaScript. Effects honor reduced-motion preferences, and pointer enhancements are disabled on touch devices. A skip link and visible focus styles are present.
+
+The road-alignment fix uses a common SVG projection and unified scene movement. Narrow-screen CSS puts the illustration in normal document flow, but complete mobile-device and accessibility end-to-end coverage remains outstanding.
+
+## Before any public launch
+
+Use [LAUNCH.md](LAUNCH.md) as the launch checklist. Remaining requirements include real SMS delivery without OTP disclosure, request/login rate limiting, CSRF protection, independently generated secrets, HTTPS and secure cookies, safe staff provisioning without known passwords, authenticated phone encryption/key management, production serving, migrations, persistent storage, backups/restoration, logging/health checks and independent browser/security/accessibility verification.
+
+**Hosting/domain/SMS recommendations and incomplete staging-security modules have not been integrated into `main`. No public deployment has been performed.** Do not bypass the production guard or mistake passing local tests for launch authorization.
 
 ## Troubleshooting
 
-- **`Address already in use` on port 5001** — something else holds the port Select another port with `.\start-demo.cmd -Port 5002`, or free the port (`Get-NetTCPConnection -LocalPort 5001` / `lsof -i :5001`).
-- **PowerShell script policy blocks the launcher** — use `.\start-demo.cmd` or run `.\.venv\Scripts\python.exe run.py` directly. Activation is not needed.
-- **`ModuleNotFoundError: flask`** — install requirements using the repository interpreter: `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`.
-- **Stale/broken data after changing `CIVICSYNC_DATA_SECRET`** — phone hashes were computed with the old key. Delete `civicsync.db` and restart to reseed.
-- **Reset the demo** — stop the server, delete `civicsync.db` (repo root), start again; everything reseeds automatically.
-- **Windows CRLF noise in git diffs** — optional: `git config core.autocrlf true`.
-- **Map tiles don't load offline** — Leaflet tiles come from OpenStreetMap CDN; pins, filters, and `/api/mapdata` still work without internet.
+- **Port 5001 already in use:** select another port, such as `.\start-demo.cmd -Port 5002`.
+- **PowerShell policy blocks a script:** use `.\start-demo.cmd` or run the repository's `.venv` Python directly; no permanent policy change is needed.
+- **`ModuleNotFoundError: flask`:** install `requirements.txt` with the same `.venv` interpreter used to start the application.
+- **Phone login breaks after changing the data secret:** restore the original secret for existing data, or deliberately reset only a backed-up disposable demo database. Do not casually rotate it on existing data.
+- **Old UI after an update:** restart the local server and reload the page. The changed main assets have versioned URLs.
+- **Map/CDN failure:** use the fallback behavior described above; no external geocoder is used.
+- **Production startup refused:** this is intentional. Complete and review [LAUNCH.md](LAUNCH.md), rather than removing the guard.
 
 ## Project layout
 
+```text
+app/                  Flask factory, models, services, role blueprints,
+                      path bootstrap and validated upload handling
+templates/            Server-rendered Jinja pages at repository root
+static/               Theme, progressive enhancements and map scripts
+tests/                Smoke, workflow, completion, security-boundary
+                      and recovered-regression tests
+run.py                Local development entrypoint
+start-demo.cmd        Windows wrapper for the PowerShell launcher
+start-demo.ps1        Repository-local Windows demo launcher
+LAUNCH.md             Public-launch requirements and refusal guard context
+requirements.txt      Runtime dependencies
+requirements-dev.txt  Test dependencies
 ```
-app/            Flask package: models, services (business rules, conflict detection),
-                blueprints (public/auth/employee/chairman/admin/citizen/api)
-templates/      Jinja templates (repository root, wired via app/bootstrap.py)
-static/         style.css, app.js
-tests/          pytest smoke tests (isolated temp DB)
-run.py          Development entrypoint
-requirements.txt / requirements-dev.txt
-```
-
-
-## Local completion build (10 October 2026)
-
-This is a separate local copy; the original source and original demo database were not modified. No public deployment or external geocoding is performed.
-
-From the repository folder on Windows, run `start-demo.cmd` after creating `.venv` and installing `requirements.txt` as shown above. It uses this repository's `.venv` and defaults to http://127.0.0.1:5001. Use `-Port 5002` if another server occupies that port. It creates a local civicsync.db on first launch.
-
-Run tests: `.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt`, then `.\.venv\Scripts\python.exe -m pytest tests/ -q`. Each test uses a separate temporary database.
-
-Citizen reports accept an address / landmark without coordinates; these reports remain visible in the feed, but do not appear on a map. Alternatively click the report map and drag the marker. Coordinate fields are hidden, optional and validated for paired, finite values in range. No guessed coordinates or geocoding are used.
-
-The public map includes layer, status and department filters, optional marker clustering and a density heatmap. Leaflet, plugins and OpenStreetMap tiles require network access. If the library fails, a text list is shown; address-only reports remain possible without the map. Heatmap/clustering gracefully fall back if those optional libraries fail.
-
-Completion proof is a local JPEG, PNG or WebP image, max 5 MB and 20 megapixels, genuinely decoded by Pillow and rewritten as metadata-free JPEG under a random filename. Original filenames, SVG and arbitrary URLs are not accepted as completion proof. The upload route enforces project visibility; only the owning active department can submit proof through its workspace. Completion still requires progress 100% and a nonempty note.
-
-Joint work can be proposed from the workspace coordination screen by an active employee with at least one own-department project. It needs two departments, eligible submitted/active projects, valid dates and every project pair within 200 metres. Chairman review is required.
-
-Admin department edit/delete is audited. Deletion refuses any scalar or JSON-held department reference; historical records are preserved.
-
-Demo credentials: Chairman CH-0001 / chairman123; Admin AD-0001 / admin123; Roads RD-1001 / roads123; Drainage DR-2002 / drainage123. Citizen demo phone +919888888888 uses the local returned demo OTP. These are synthetic fixtures, not real personal data.
-
-### Important boundaries
-Development demonstration only: demo OTP disclosure, default development secrets, demo-grade phone obfuscation, Flask development server, and no production CSRF/rate limiting or SMS provider. Do not expose publicly. Map tiles/libraries are third-party network resources; no address is sent for geocoding. Delay sweep is manual via Chairman console, not a hosted scheduled job. Uploaded files are local and need backup in a real deployment. Real-world browser/device coverage, accessibility audits and production load/security testing are not claimed.
-
-## UI theme (bright modern civic redesign)
-
-The interface uses a light warm-white canvas with a sky-blue/teal civic palette, restrained amber accents,
-layered rounded cards and a CSS/SVG isometric hero on the homepage. All styling is local
-(`static/style.css`, system fonts only — no external font or CSS frameworks).
-
-- Hero parallax, card tilt and scroll-reveal are **decorative progressive enhancements**: every page
-  renders fully server-side and remains usable without JavaScript.
-- Animations honor `prefers-reduced-motion: reduce` (CSS + JS) and pointer effects are disabled on touch devices.
-- Keyboard users get a skip-to-content link and visible focus rings; the map keeps its own gestures
-  (pan/zoom/clustering/heat layer) independent from decorative animation.
-- Homepage KPI numbers are computed live from the database (projects, open conflicts, approved joint
-  schedules, departments) — never hardcoded.
-- Map page continues to use Leaflet 1.9.4 + markercluster + leaflet.heat from CDN with graceful
-  offline failure messages; tiles require internet, filters/pins degrade cleanly without it.
-- Verified by `tests/test_redesign_ui.py` (hero/CTAs, real-data metrics, theme tokens, reduced-motion,
-  auth-page form ids preserved, map wiring preserved).
-
-
-## Recovered Qwen workflow continuation (10 October 2026)
-
-The saved Qwen feature tests were recovered from commit `2057a721249d7be75b8cad3beacae6c358d42dbf` and integrated selectively on verified main, rather than replacing the application. The final local suite passes 113 tests; all 51 templates compile. Map API filters now support layer, department, status, ward and search; the browser controls use the same API. Address-only reports retain NULL coordinates and explicit labels. Department deletion is audited and refuses referenced rows; the legacy delete route retains administrator authorization. Safe Pillow decoding and random JPEG media names remain in use. Recovered tests were adapted to genuine image fixtures/current media routes and to the requirement that delay reasons become public only after Chairman approval.
-
-The homepage city uses a shared 2:1 isometric grid with road lanes below building footprints and unified scene motion. Desktop homepage, map layer selection and heatmap rendering were checked in a real browser. Full mobile/accessibility E2E remains unverified. Public launch is still blocked by LAUNCH.md; this work does not add production SMS or bypass the launch guard.
