@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Citizen Login — CivicSync{% endblock %}
 {% block content %}
-<div class="card" style="max-width:480px">
+<div class="auth-shell"><div class="card">
   <h1>Citizen login</h1>
   <p class="muted">Phone-verified citizens log in with an OTP. No SMS gateway is configured in this local build, so the demo OTP is shown on screen.</p>
   <div id="msg"></div>
@@ -13,7 +13,7 @@
     <button id="verifyotp">Verify & log in</button>
   </div>
   <p class="muted">New here? <a href="{{ url_for('auth.signup_page') }}">Sign up as a citizen</a> · Officials use <a href="{{ url_for('auth.employee_login_page') }}">Official Login</a>.</p>
-</div>
+</div></div>
 {% endblock %}
 {% block scripts %}
 <script>

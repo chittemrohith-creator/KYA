@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Citizen Sign up — CivicSync{% endblock %}
 {% block content %}
-<div class="card" style="max-width:480px">
+<div class="auth-shell"><div class="card">
   <h1>Sign up as a citizen</h1>
   <p class="muted">Your phone number is verified with an OTP and encrypted at rest. It is never displayed publicly. In this local build there is no SMS gateway, so the OTP is shown on screen.</p>
   <div id="msg"></div>
@@ -13,7 +13,7 @@
     <button id="verify">Verify & create account</button>
   </div>
   <p class="muted">Department employees: <a href="{{ url_for('auth.employee_register_page') }}">register here</a>.</p>
-</div>
+</div></div>
 {% endblock %}
 {% block scripts %}
 <script>

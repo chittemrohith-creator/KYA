@@ -4,10 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}CivicSync{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20261010-redesign-1') }}">
 </head>
 <body>
-<nav class="topnav">
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<nav class="topnav" aria-label="Primary">
   <a class="brand" href="/">🏛️ CivicSync</a>
   <div class="links">
     <a href="/projects">Projects</a>
@@ -32,13 +33,13 @@
     {% endif %}
   </div>
 </nav>
-<main>
+<main id="main-content">
 {% block content %}{% endblock %}
 </main>
-<footer>
+<footer class="site-footer">
   <p>CivicSync — public coordination layer for municipal public works. Official information is verified; citizen voice is separate.</p>
 </footer>
-<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js', v='20261010-redesign-1') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
