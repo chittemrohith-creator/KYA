@@ -101,6 +101,7 @@ class Project(db.Model):
     delay_reason_posted_at = db.Column(db.DateTime)
     unexplained_delay = db.Column(db.Boolean, default=False)
     completion_note = db.Column(db.Text)
+    rejection_reason = db.Column(db.Text)
     conflict_flagged = db.Column(db.Boolean, default=False)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     approved_by = db.Column(db.Integer, db.ForeignKey("users.id"))
