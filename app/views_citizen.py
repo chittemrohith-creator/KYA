@@ -36,8 +36,7 @@ def reports():
     if request.method == "POST":
         f = request.form
         try:
-            lat = float(f["latitude"]) if f.get("latitude") else None
-            lon = float(f["longitude"]) if f.get("longitude") else None
+            lat, lon = services.validate_coordinates(f.get("latitude"), f.get("longitude"))
             category = f.get("category", "other")
             if lat is not None and lon is not None:
                 dupes = services.find_duplicate_reports(lat, lon, category)
