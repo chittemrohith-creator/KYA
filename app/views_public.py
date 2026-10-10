@@ -59,11 +59,11 @@ def map_data():
                      "delayed_label": ("⚠️ Delayed — Reason Pending" if p.unexplained_delay else
                                        "⚠️ Delayed" if p.status == "delayed" else None)})
     for cp in CitizenPost.query.filter_by(status="published").all():
-        if cp.latitude is None:
+        if cp.latitude is None or cp.longitude is None:
             continue
         pins.append({"kind": "citizen_report", "color": "blue", "id": cp.id,
                      "title": cp.body[:70], "lat": cp.latitude, "lng": cp.longitude,
-                     "badge": "👤 Citizen — Phone Verified"})
+                     "status": cp.status, "department": "", "badge": "👤 Citizen — Phone Verified"})
     for c in Conflict.query.filter(Conflict.status.in_(["open", "escalated"])).all():
         a = c.project_a
         pins.append({"kind": "conflict", "color": "orange", "id": c.id,
@@ -76,6 +76,7 @@ def map_data():
             pins.append({"kind": "joint", "color": "purple", "id": js.id,
                          "title": f"🤝 Coordinated Work — {js.location} ({depts})",
                          "lat": first.latitude, "lng": first.longitude})
+    pins = [p for p in pins if p.get("lat") is not None and p.get("lng") is not None and __import__("math").isfinite(p["lat"]) and __import__("math").isfinite(p["lng"]) and -90 <= p["lat"] <= 90 and -180 <= p["lng"] <= 180]
     return {"pins": pins}
 
 
