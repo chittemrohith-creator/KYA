@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}Contractor {{ name }} — CivicSync{% endblock %}
+{% block content %}
+<h1>Contractor: {{ name }}</h1>
+<div class="kpi">
+  <div><b>{{ stats.projects }}</b>projects</div>
+  <div><b>{{ stats.completed }}</b>completed</div>
+  <div><b>{{ stats.on_time_rate if stats.on_time_rate is not none else '—' }}</b>on-time rate %</div>
+  <div><b>{{ stats.delay_history }}</b>delay history</div>
+  <div><b>{{ stats.citizen_feedback_score }}</b>citizen feedback score</div>
+</div>
+<h2>Public projects</h2>
+{% if projects %}<div class="grid">{% for p in projects %}{{ m.project_card(p) }}{% endfor %}</div>
+{% else %}<p class="muted">No public projects for this contractor.</p>{% endif %}
+<p class="muted">Citizen feedback: {{ stats.reports_resolved }}/{{ stats.linked_reports }} reports resolved.</p>
+{% endblock %}
