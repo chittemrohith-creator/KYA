@@ -180,6 +180,7 @@ def reject_project(project, chairman, reason, request=None):
     if project.status != "pending_chairman":
         raise BusinessRuleError(f"Project cannot be rejected from state '{project.status}'.")
     project.status = "rejected"
+    project.rejection_reason = reason
     meta = {"rejection_reason": reason}
     notify_user(db.session.get(User, project.created_by),
                 "Project rejected", f"'{project.title}' — Reason: {reason}",
@@ -207,7 +208,7 @@ def complete_project(project, employee, note, request=None):
     has_completion_photo = ProjectPhoto.query.filter_by(project_id=project.id, kind="completion").count() >= 1
     if not has_completion_photo:
         raise BusinessRuleError("Cannot mark completed without at least one completion photo (rule 5).")
-    if not note:
+    if not note or not note.strip():
         raise BusinessRuleError("Cannot mark completed without a completion note (rule 5).")
     if project.status == "delayed" and not project.delay_reason:
         raise BusinessRuleError("Delayed projects require a published delay reason before completion (rule 7/18).")
@@ -237,7 +238,9 @@ def post_delay_reason(project, employee, reason, request=None):
     """Section 20: dept posts the delay reason (as an official record, permanent)."""
     if project.status != "delayed":
         raise BusinessRuleError("Delay reasons are posted for delayed projects.")
-    project.delay_reason = reason
+    if not reason or not reason.strip():
+        raise BusinessRuleError("A delay reason is required.")
+    # Explanation becomes public only after Chairman approves the official post.
     project.delay_reason_posted_at = utcnow()
     project.unexplained_delay = False
     p = OfficialPost(project_id=project.id, department_id=project.department_id,
@@ -274,8 +277,8 @@ def run_delay_sweep(now=None):
                         f"'{prj.title}' ends on {prj.end_date}.", link=f"/workspace/projects/{prj.id}")
     for prj in Project.query.filter_by(status="delayed", unexplained_delay=False).all():
         deadline = prj.end_date + timedelta(hours=48)
-        posted = prj.delay_reason_posted_at and prj.delay_reason_posted_at.date() <= deadline.date()
-        if not posted and now.date() > deadline.date():
+        posted = prj.delay_reason_posted_at and prj.delay_reason_posted_at.date() <= deadline
+        if not posted and now.date() > deadline:
             prj.unexplained_delay = True
             notify_chairman("Unexplained delay",
                             f"'{prj.title}' ({prj.department.name}) passed the 48h window with no reason.",
@@ -328,6 +331,11 @@ def approve_post(post, chairman, request=None):
     post.approved_by = chairman.id
     post.approved_at = utcnow()
     post.published_at = utcnow()
+    if post.project_id and post.title.startswith("Delay reason — "):
+        project = db.session.get(Project, post.project_id)
+        if project:
+            project.delay_reason = post.body
+            project.unexplained_delay = False
     notify_user(db.session.get(User, post.employee_id), "Post published",
                 f"'{post.title}' is now public.", link=f"/projects/{post.project_id}" if post.project_id else "/departments/" + post.department.slug)
     audit("post.approved_published", chairman, "official_post", post.id, request=request)
@@ -362,9 +370,19 @@ FLAG_THRESHOLD = 5
 
 
 def create_citizen_post(user, body, **kwargs):
-    if user.role != ROLE_CITIZEN or not user.phone_verified:
+    if user.role != ROLE_CITIZEN or user.status != USER_STATUS_ACTIVE or not user.phone_verified:
         raise BusinessRuleError("Citizens must verify phone before posting (rule 8).")
-    cp = CitizenPost(user_id=user.id, body=body, **kwargs)
+    if not body or not body.strip():
+        raise BusinessRuleError("Description is required.")
+    lat, lon = validate_coordinates(kwargs.get("latitude"), kwargs.get("longitude"))
+    kwargs["latitude"], kwargs["longitude"] = lat, lon
+    if lat is None and not kwargs.get("address", "").strip():
+        raise BusinessRuleError("Choose a map location or enter an address / landmark.")
+    if kwargs.get("linked_project_id"):
+        linked = db.session.get(Project, kwargs["linked_project_id"])
+        if not linked or linked.status not in ("approved", "in_progress", "delayed", "completed", "verified_complete"):
+            raise BusinessRuleError("Choose a publicly visible project.")
+    cp = CitizenPost(user_id=user.id, body=body.strip(), **kwargs)
     db.session.add(cp)
     db.session.flush()
     audit("citizen_post.created", user, "citizen_post", cp.id)
@@ -430,7 +448,7 @@ def find_duplicate_reports(lat, lon, category, radius_m=150, window_days=7):
     candidates = []
     for cp in CitizenPost.query.filter(CitizenPost.status == "published",
                                        CitizenPost.created_at >= cutoff).all():
-        if cp.latitude is None or cp.category != category:
+        if cp.latitude is None or cp.longitude is None or cp.category != category:
             continue
         if haversine_meters(lat, lon, cp.latitude, cp.longitude) <= radius_m:
             candidates.append(cp)
@@ -453,8 +471,10 @@ def respond_to_report(response_body, employee, citizen_post, request=None):
 
 
 def approve_response(resp, chairman, request=None):
-    if chairman.role != ROLE_CHAIRMAN:
+    if chairman.role != ROLE_CHAIRMAN or chairman.status != USER_STATUS_ACTIVE:
         raise BusinessRuleError("Only the Chairman approves official responses.")
+    if resp.status != "pending_chairman" or chairman.id == resp.employee_id:
+        raise BusinessRuleError("Only pending responses by another official may be approved.")
     resp.status = "approved"
     resp.approved_by = chairman.id
     resp.approved_at = utcnow()
@@ -648,20 +668,25 @@ def unresolved_conflict_check(now=None):
 
 # ------------------------------------------------------------------ joint scheduling (section 15)
 def propose_joint_schedule(employee, project_ids, location, start_date, end_date, reason, request=None):
-    depts = set()
-    for pid in project_ids:
-        p = db.session.get(Project, pid)
-        if not p:
-            raise BusinessRuleError(f"Project {pid} not found.")
-        if p.department_id != employee.department_id:
-            raise BusinessRuleError("Proposer's projects must belong to their department.")
-        depts.add(p.department_id)
-    if len(project_ids) < 2 or len(depts) < 2:
-        raise BusinessRuleError("Joint schedules need 2+ departments and 2+ projects (rules 1-2).")
+    from itertools import combinations
+    if employee.role not in (ROLE_EMPLOYEE, ROLE_DEPT_HEAD) or employee.status != USER_STATUS_ACTIVE:
+        raise BusinessRuleError("Only active verified employees may propose joint work.")
+    project_ids = list(dict.fromkeys(project_ids))
     pts = [db.session.get(Project, pid) for pid in project_ids]
-    for a, b in zip(pts, pts[1:]):
+    if any(p is None for p in pts):
+        raise BusinessRuleError("Project not found.")
+    depts = {p.department_id for p in pts}
+    if len(pts) < 2 or len(depts) < 2:
+        raise BusinessRuleError("Joint schedules need 2+ departments and 2+ projects.")
+    if employee.department_id not in depts:
+        raise BusinessRuleError("Include at least one project from your own department.")
+    if any(p.status not in ("pending_chairman", "approved", "in_progress", "delayed") for p in pts):
+        raise BusinessRuleError("Only submitted or active projects are eligible.")
+    if not location.strip() or not reason.strip() or not start_date or not end_date or end_date < start_date:
+        raise BusinessRuleError("Location, reason and valid ordered dates are required.")
+    for a, b in combinations(pts, 2):
         if haversine_meters(a.latitude, a.longitude, b.latitude, b.longitude) > CONFLICT_RADIUS_M:
-            raise BusinessRuleError("Projects must share a common location (within 200m) (rule 3).")
+            raise BusinessRuleError("Every project pair must be within 200m.")
     js = JointSchedule(project_ids=list(project_ids), department_ids=sorted(depts),
                        location=location, approved_start_date=start_date,
                        approved_end_date=end_date, reason=reason, status="pending_chairman")
@@ -685,12 +710,13 @@ def approve_joint_schedule(js, chairman, request=None):
     for pid in js.project_ids:
         p = db.session.get(Project, pid)
         if p:
-            p.conflict_flagged = False
             open_c = Conflict.query.filter(
                 Conflict.status == "open",
                 (Conflict.project_a_id == pid) | (Conflict.project_b_id == pid)).all()
             for c in open_c:
-                resolve_conflict(c, chairman, f"Resolved via joint schedule #{js.id}: {js.reason}")
+                if c.project_a_id in js.project_ids and c.project_b_id in js.project_ids:
+                    resolve_conflict(c, chairman, f"Resolved via joint schedule #{js.id}: {js.reason}")
+            p.conflict_flagged = any(c.status in ("open", "escalated") for c in Conflict.query.filter((Conflict.project_a_id == pid) | (Conflict.project_b_id == pid)).all())
     msg = CoordinationMessage(from_department_id=None, to_department_ids=js.department_ids,
                               message_type="decision",
                               body=(f"🤝 Coordinated Work — {js.location}\n"
@@ -711,6 +737,8 @@ def approve_joint_schedule(js, chairman, request=None):
 def reject_joint_schedule(js, chairman, reason, request=None):
     if chairman.role != ROLE_CHAIRMAN:
         raise BusinessRuleError("Only the Chairman rejects joint schedules.")
+    if js.status != "pending_chairman":
+        raise BusinessRuleError("Only pending schedules can be rejected.")
     if not reason:
         raise BusinessRuleError("Rejections require a reason (rule 28).")
     js.status = "rejected"
@@ -897,3 +925,15 @@ def contractor_stats(contractor_name):
         "linked_reports": len(feedback_posts),
         "reports_resolved": resolved,
     }
+
+
+def validate_coordinates(latitude, longitude, required=False):
+    if latitude in (None, "") and longitude in (None, "") and not required:
+        return None, None
+    try:
+        lat, lon = float(latitude), float(longitude)
+    except (ValueError, TypeError):
+        raise BusinessRuleError("Choose a valid map location.")
+    if not math.isfinite(lat) or not math.isfinite(lon) or not -90 <= lat <= 90 or not -180 <= lon <= 180:
+        raise BusinessRuleError("Location coordinates are outside valid ranges.")
+    return lat, lon
