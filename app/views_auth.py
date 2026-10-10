@@ -91,7 +91,7 @@ def api_login_citizen_verify():
     if not u:
         return jsonify({"error": "Request a new OTP."}), 400
     try:
-        if u.otp_expires_at is None or utcnow() > u.otp_expires_at:
+        if services._as_utc(u.otp_expires_at) is None or utcnow() > services._as_utc(u.otp_expires_at):
             raise BusinessRuleError("OTP expired.")
         if u.otp_attempts >= services.OTP_MAX_ATTEMPTS:
             raise BusinessRuleError("Too many incorrect attempts.")

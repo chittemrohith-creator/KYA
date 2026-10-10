@@ -820,8 +820,18 @@ def begin_citizen_signup(phone):
     return u, otp  # OTP returned here only because there is no SMS gateway in demo
 
 
+def _as_utc(dt):
+    """SQLite returns naive datetimes; keep comparisons against utcnow() consistent."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def verify_citizen_otp(user, otp, display_name=None):
-    if user.otp_expires_at is None or utcnow() > user.otp_expires_at:
+    expires = _as_utc(user.otp_expires_at)
+    if expires is None or utcnow() > expires:
         raise BusinessRuleError("OTP expired. Request a new code.")
     if user.otp_attempts >= OTP_MAX_ATTEMPTS:
         raise BusinessRuleError("Too many incorrect attempts. OTP expired.")
