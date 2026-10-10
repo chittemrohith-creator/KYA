@@ -205,13 +205,13 @@ def complete_project(project, employee, note, request=None):
         raise BusinessRuleError(f"Cannot mark completed from state '{project.status}'.")
     if project.progress_percentage != 100:
         raise BusinessRuleError("Cannot mark completed without progress = 100% (rule 5).")
+    if project.status == "delayed" and not project.delay_reason:
+        raise BusinessRuleError("Delayed projects require a published delay reason before completion (rule 7/18).")
     has_completion_photo = ProjectPhoto.query.filter_by(project_id=project.id, kind="completion").count() >= 1
     if not has_completion_photo:
         raise BusinessRuleError("Cannot mark completed without at least one completion photo (rule 5).")
     if not note or not note.strip():
         raise BusinessRuleError("Cannot mark completed without a completion note (rule 5).")
-    if project.status == "delayed" and not project.delay_reason:
-        raise BusinessRuleError("Delayed projects require a published delay reason before completion (rule 7/18).")
     project.status = "completed"
     project.completion_note = note
     project.actual_end_date = utcnow().date()
@@ -376,8 +376,10 @@ def create_citizen_post(user, body, **kwargs):
         raise BusinessRuleError("Description is required.")
     lat, lon = validate_coordinates(kwargs.get("latitude"), kwargs.get("longitude"))
     kwargs["latitude"], kwargs["longitude"] = lat, lon
-    if lat is None and not kwargs.get("address", "").strip():
-        raise BusinessRuleError("Choose a map location or enter an address / landmark.")
+    address = kwargs.get("address", "").strip()
+    kwargs["address"] = address
+    if lat is None and len(address) < 8:
+        raise BusinessRuleError("Location required: choose a map pin or enter an address / landmark of at least 8 characters.")
     if kwargs.get("linked_project_id"):
         linked = db.session.get(Project, kwargs["linked_project_id"])
         if not linked or linked.status not in ("approved", "in_progress", "delayed", "completed", "verified_complete"):
@@ -686,7 +688,7 @@ def propose_joint_schedule(employee, project_ids, location, start_date, end_date
         raise BusinessRuleError("Location, reason and valid ordered dates are required.")
     for a, b in combinations(pts, 2):
         if haversine_meters(a.latitude, a.longitude, b.latitude, b.longitude) > CONFLICT_RADIUS_M:
-            raise BusinessRuleError("Every project pair must be within 200m.")
+            raise BusinessRuleError("Joint projects require a common location: every project pair must be within 200m.")
     js = JointSchedule(project_ids=list(project_ids), department_ids=sorted(depts),
                        location=location, approved_start_date=start_date,
                        approved_end_date=end_date, reason=reason, status="pending_chairman")
@@ -935,5 +937,5 @@ def validate_coordinates(latitude, longitude, required=False):
     except (ValueError, TypeError):
         raise BusinessRuleError("Choose a valid map location.")
     if not math.isfinite(lat) or not math.isfinite(lon) or not -90 <= lat <= 90 or not -180 <= lon <= 180:
-        raise BusinessRuleError("Location coordinates are outside valid ranges.")
+        raise BusinessRuleError("Location is outside valid coordinates: latitude -90 to 90 and longitude -180 to 180.")
     return lat, lon
