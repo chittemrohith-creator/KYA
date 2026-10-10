@@ -10,7 +10,7 @@
   <select name="category">{% for c in ['road','drainage','water','electricity','telecom','sewer','other'] %}
     <option value="{{ c }}" {% if form.get('category')==c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
   <label>Address / landmark</label><input name="address" value="{{ form.get('address','') }}">
-  <p>Enter an address / landmark, or click the map and drag the marker. An address-only report is not placed on the public map.</p>
+  <p>You never need to type coordinates. Enter an address / landmark of at least 8 characters, or click the map and drag the marker. Click here to place your location pin. An address-only report is not placed on the public map.</p>
   <input type="hidden" id="report-lat" name="latitude" value="{{ form.get('latitude','') }}">
   <input type="hidden" id="report-lon" name="longitude" value="{{ form.get('longitude','') }}">
   <div id="report-map" style="height:300px"></div><p id="report-map-status" class="muted">Address-only reporting is available even if the map cannot load.</p>
