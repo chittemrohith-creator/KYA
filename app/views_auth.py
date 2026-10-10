@@ -121,9 +121,14 @@ def api_login_employee():
     data = request.get_json(force=True) or {}
     code = (data.get("employee_code") or "").strip()
     pw = data.get("password") or ""
-    u = User.query.filter_by(employee_code=code).first()
+    # Staff login accepts employee code or official email (pre-seeded Chairman/Admin have no department code).
+    u = User.query.filter_by(employee_code=code).first() if code else None
+    if u is None and "@" in code:
+        u = User.query.filter_by(email=code.lower()).first()
     if not u or not check_password(pw, u.password_hash or ""):
         return jsonify({"error": "Invalid credentials."}), 401
+    if u.role == ROLE_CITIZEN:
+        return jsonify({"error": "Invalid credentials."}), 401  # citizens use the phone+OTP login
     if u.status == "pending_verification":
         return jsonify({"error": "Account pending Chairman verification. You cannot access the workspace yet."}), 403
     if u.status in ("rejected", "suspended"):

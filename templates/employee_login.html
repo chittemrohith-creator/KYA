@@ -5,7 +5,7 @@
   <h1>Department official login</h1>
   <p class="muted">Chairman, System Admin, and verified employees log in here. Pending accounts cannot access the workspace until Chairman approval.</p>
   <div id="msg"></div>
-  <label>Employee code</label><input id="code" placeholder="e.g. RD-1001">
+  <label>Employee code or official email</label><input id="code" placeholder="e.g. RD-1001">
   <label>Password</label><input id="password" type="password">
   <button id="login">Log in</button>
   <p class="muted">Not registered? <a href="{{ url_for('auth.employee_register_page') }}">Register as a department employee</a>.</p>

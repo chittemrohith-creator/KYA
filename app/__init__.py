@@ -78,6 +78,13 @@ def seed_all(app, demo=True):
     """Seed departments + pre-seeded Chairman/Admin. Optionally demo accounts & MG Road scenario."""
     with app.app_context():
         db.create_all()
+        # Backfill employee codes for Chairman/Admin rows created by older seeds (staff login needs a code).
+        _legacy = User.query.filter(User.role.in_([ROLE_CHAIRMAN, ROLE_ADMIN]),
+                                    User.employee_code.is_(None)).all()
+        if _legacy:
+            for lu in _legacy:
+                lu.employee_code = "CH-0001" if lu.role == ROLE_CHAIRMAN else "AD-0001"
+            db.session.commit()
         secret = app.config["APP_SECRET"]
         dept_map = {}
         for name, slug in DEFAULT_DEPARTMENTS:
@@ -95,6 +102,7 @@ def seed_all(app, demo=True):
         if not User.query.filter_by(role=ROLE_CHAIRMAN).first():
             chair = User(role=ROLE_CHAIRMAN, full_name="Municipal Chairman",
                          display_name="Municipal Chairman",
+                         employee_code="CH-0001",  # staff login accepts code or official email; pre-seeded roles need a code too
                          email="chairman@civic.municipality",
                          phone_hash=services.hash_phone("+919000000001", secret),
                          phone_encrypted=services.encrypt_phone("+919000000001", secret),
@@ -103,6 +111,7 @@ def seed_all(app, demo=True):
             db.session.add(chair)
         if not User.query.filter_by(role=ROLE_ADMIN).first():
             adm = User(role=ROLE_ADMIN, full_name="System Administrator",
+                       employee_code="AD-0001",
                        email="admin@civic.municipality",
                        phone_hash=services.hash_phone("+919000000002", secret),
                        phone_encrypted=services.encrypt_phone("+919000000002", secret),
