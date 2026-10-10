@@ -20,7 +20,7 @@ def _auth(*roles):
         @wraps(fn)
         def wrapper(**kw):
             u = current_user()
-            if u is None or u.role not in roles:
+            if u is None or u.role not in roles or u.status != "active":
                 return jsonify({"error": "Forbidden"}), 403
             return fn(user=u, **kw)
         return wrapper
