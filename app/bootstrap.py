@@ -17,6 +17,8 @@ def _resolve_db_uri(uri, repo_root):
     """Make relative sqlite:/// paths absolute under the repo root so the working
     directory from which the server is started does not matter."""
     prefix = "sqlite:///"
+    if uri == "sqlite:///:memory:":
+        return uri
     if uri.startswith(prefix) and not os.path.isabs(uri[len(prefix):]):
         return prefix + os.path.join(repo_root, uri[len(prefix):])
     return uri
