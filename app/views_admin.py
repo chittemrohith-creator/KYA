@@ -33,12 +33,12 @@ def dashboard():
 
 @bp.route("/departments", methods=["GET", "POST"])
 @admin_required
-def departments():
+def departments(delete_id=None):
     error = None
     if request.method == "POST":
         try:
-            action = request.form.get("action", "create")
-            did = request.form.get("department_id", type=int)
+            action = "delete" if delete_id is not None else request.form.get("action", "create")
+            did = delete_id if delete_id is not None else (request.form.get("department_id", type=int) or request.form.get("dept_id", type=int))
             d = db.session.get(Department, did) if did else None
             if action in ("edit", "delete") and not d:
                 abort(404)
@@ -48,9 +48,9 @@ def departments():
                     for col in mapper.columns:
                         if any(fk.target_fullname == "departments.id" for fk in col.foreign_keys):
                             if db.session.query(mapper.class_).filter(col == d.id).first():
-                                raise BusinessRuleError("Department is referenced and cannot be deleted.")
+                                raise BusinessRuleError("Cannot delete: department is referenced and cannot be deleted.")
                 if any(d.id in (m.to_department_ids or []) for m in CoordinationMessage.query.all()) or any(d.id in (j.department_ids or []) or d.id in (j.no_show_departments or []) for j in JointSchedule.query.all()):
-                    raise BusinessRuleError("Department has coordination references and cannot be deleted.")
+                    raise BusinessRuleError("Cannot delete: department has coordination references and cannot be deleted.")
                 services.audit("department.deleted", current_user(), "department", d.id, metadata={"name": d.name}, request=request)
                 db.session.delete(d)
             elif action in ("create", "edit"):
@@ -74,6 +74,10 @@ def departments():
             return redirect(url_for("admin.departments"))
         except BusinessRuleError as exc:
             db.session.rollback()
+            if action == "delete" and d is not None:
+                services.audit("department.delete_blocked", current_user(), "department", d.id,
+                               metadata={"reason": str(exc)}, request=request)
+                db.session.commit()
             error = str(exc)
     return render_template("admin/departments.html", departments=Department.query.all(), error=error)
 
@@ -118,3 +122,9 @@ def system():
         "audit_integrity": "append-only (no update/delete endpoints exposed)",
     }
     return render_template("admin/system.html", health=health)
+
+
+@bp.route("/departments/<int:did>/delete", methods=["POST"])
+@admin_required
+def delete_department(did):
+    return departments(delete_id=did)

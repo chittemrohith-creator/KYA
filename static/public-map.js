@@ -1,13 +1,56 @@
 (() => {
- const el=document.getElementById('mapid'),status=document.getElementById('mapstatus');let pins=[],map=null,group=null,heat=null;
- const controls=['map-kind','map-filter-status','map-department','map-heat'].map(id=>document.getElementById(id));
- function link(p){return p.kind==='project'?'/projects/'+p.id:p.kind==='citizen_report'?'/citizen-reports/'+p.id:p.kind==='joint'?'/joint-schedules/'+p.id:'/coordination';}
- function draw(){const shown=pins.filter(p=>(!controls[0].value||p.kind===controls[0].value)&&(!controls[1].value||p.status===controls[1].value)&&(!controls[2].value||(p.department||'').toLowerCase().includes(controls[2].value.toLowerCase())));
- if(!map){el.replaceChildren();const ul=document.createElement('ul');shown.forEach(p=>{const li=document.createElement('li'),a=document.createElement('a');a.href=link(p);a.textContent=p.title;li.append(a);ul.append(li);});el.append(ul);status.textContent='Map library unavailable; showing '+shown.length+' mapped items as a list.';return;}
- group.clearLayers();if(heat){map.removeLayer(heat);heat=null;}
- shown.forEach(p=>{const box=document.createElement('div'),title=document.createElement('strong'),a=document.createElement('a');title.textContent=p.title;a.href=link(p);a.textContent='Details';box.append(title,document.createElement('br'),document.createTextNode(p.badge||''),document.createElement('br'),a);L.circleMarker([p.lat,p.lng],{radius:8,color:p.color,fillOpacity:.7}).bindPopup(box).addTo(group);});
- if(controls[3].checked&&L.heatLayer){heat=L.heatLayer(shown.map(p=>[p.lat,p.lng,.6]),{radius:25}).addTo(map);}
- status.textContent=shown.length+' mapped items. Address-only reports are excluded.'+(L.markerClusterGroup?'':' Clustering unavailable.')+(controls[3].checked&&!L.heatLayer?' Heatmap unavailable.':'');}
- controls.forEach(c=>c.addEventListener('input',draw));
- fetch(el.dataset.mapdataUrl).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();}).then(data=>{pins=(data.pins||[]).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&Math.abs(p.lat)<=90&&Math.abs(p.lng)<=180);if(typeof L!=='undefined'){map=L.map(el).setView([20,0],2);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map).on('tileerror',()=>{status.textContent='Map tiles unavailable; markers and filters remain available.';});group=(L.markerClusterGroup?L.markerClusterGroup():L.layerGroup()).addTo(map);if(pins.length)map.fitBounds(pins.map(p=>[p.lat,p.lng]),{maxZoom:15});}draw();}).catch(e=>{status.textContent='Map data unavailable: '+e.message;});
+  const el = document.getElementById('mapid'), status = document.getElementById('mapstatus');
+  if (!el || !status) return;
+  const heatToggle = document.getElementById('map-heat');
+  const filters = ['map-kind', 'map-filter-status', 'map-department', 'map-ward', 'map-search'].map(id => document.getElementById(id));
+  let pins = [], map = null, group = null, heat = null, timer, pending;
+  function link(pin) {
+    return pin.kind === 'project' ? '/projects/' + pin.id : pin.kind === 'citizen_report' ? '/citizen-reports/' + pin.id : pin.kind === 'joint' ? '/joint-schedules/' + pin.id : '/coordination';
+  }
+  function draw() {
+    if (!map) {
+      el.replaceChildren();
+      const list = document.createElement('ul');
+      pins.forEach(pin => { const row = document.createElement('li'), a = document.createElement('a'); a.href = link(pin); a.textContent = pin.title; row.append(a); list.append(row); });
+      el.append(list);
+      status.textContent = 'Map library unavailable; showing ' + pins.length + ' mapped items as a list. Address-only reports are excluded.';
+      return;
+    }
+    group.clearLayers();
+    if (heat) { map.removeLayer(heat); heat = null; }
+    pins.forEach(pin => {
+      const box = document.createElement('div'), title = document.createElement('strong'), a = document.createElement('a');
+      title.textContent = pin.title; a.href = link(pin); a.textContent = 'Details';
+      box.append(title, document.createElement('br'), document.createTextNode(pin.badge || ''), document.createElement('br'), a);
+      const color = ['green', 'blue', 'orange', 'purple'].includes(pin.color) ? pin.color : 'blue';
+      // MarkerCluster expects markers, not path layers. A small validated-color
+      // div icon retains the original public layer colors and clusters properly.
+      const icon = L.divIcon({className: 'civic-map-marker', html: '<span class="pin ' + color + '"></span>', iconSize: [18, 18], iconAnchor: [9, 9]});
+      L.marker([pin.lat, pin.lng], {icon}).bindPopup(box).addTo(group);
+    });
+    if (heatToggle.checked && L.heatLayer) heat = L.heatLayer(pins.map(pin => [pin.lat, pin.lng, .6]), {radius: 25}).addTo(map);
+    status.textContent = pins.length + ' mapped items. Address-only reports are excluded.' + (L.markerClusterGroup ? '' : ' Clustering unavailable.') + (heatToggle.checked && !L.heatLayer ? ' Heatmap unavailable.' : '');
+  }
+  async function refresh() {
+    if (pending) pending.abort();
+    pending = new AbortController();
+    const params = new URLSearchParams();
+    filters.forEach(control => { if (control && control.value.trim()) params.set(control.name, control.value.trim()); });
+    try {
+      const response = await fetch(el.dataset.mapdataUrl + '?' + params.toString(), {signal: pending.signal});
+      if (!response.ok) throw Error('HTTP ' + response.status);
+      const data = await response.json();
+      pins = (data.pins || []).filter(pin => Number.isFinite(pin.lat) && Number.isFinite(pin.lng) && Math.abs(pin.lat) <= 90 && Math.abs(pin.lng) <= 180);
+      if (!map && typeof L !== 'undefined') {
+        map = L.map(el).setView([20, 0], 2);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OpenStreetMap contributors'}).addTo(map).on('tileerror', () => { status.textContent = 'Map tiles unavailable; markers and filters remain available.'; });
+        group = (L.markerClusterGroup ? L.markerClusterGroup() : L.layerGroup()).addTo(map);
+        if (pins.length) map.fitBounds(pins.map(pin => [pin.lat, pin.lng]), {maxZoom: 15});
+      }
+      draw();
+    } catch (error) { if (error.name !== 'AbortError') status.textContent = 'Map data unavailable. Please retry.'; }
+  }
+  filters.forEach(control => control && control.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(refresh, 180); }));
+  heatToggle.addEventListener('change', draw);
+  refresh();
 })();

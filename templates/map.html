@@ -8,10 +8,12 @@
     <span class="pin blue"></span> citizen reports
     <span class="pin orange"></span> conflict alerts
     <span class="pin purple"></span> coordinated work</p>
-  <label>Layer</label><select id="map-kind"><option value="">All layers</option><option value="project">Projects</option><option value="citizen_report">Citizen reports</option><option value="conflict">Conflicts</option><option value="joint">Joint work</option></select>
-  <label>Status</label><select id="map-filter-status"><option value="">All statuses</option><option>approved</option><option>in_progress</option><option>delayed</option><option>completed</option><option>verified_complete</option><option>published</option></select>
-  <label>Department</label><input id="map-department" placeholder="Filter department name">
-  <label><input type="checkbox" id="map-heat"> Show density heatmap</label>
+  <label>Layer</label><select id="map-kind" name="kind"><option value="">All layers</option><option value="project">Projects</option><option value="citizen_report">Citizen reports</option><option value="conflict">Conflicts</option><option value="joint">Joint work</option></select>
+  <label>Status</label><select id="map-filter-status" name="status"><option value="">All statuses</option><option>approved</option><option>in_progress</option><option>delayed</option><option>completed</option><option>verified_complete</option><option>published</option></select>
+  <label>Department</label><select id="map-department" name="department"><option value="">All departments</option>{% for department in departments %}<option value="{{ department.slug }}">{{ department.name }}</option>{% endfor %}</select>
+  <label>Ward</label><input id="map-ward" name="ward" placeholder="e.g. Ward 10">
+  <label>Search</label><input id="map-search" name="q" placeholder="Project, road or report">
+  <label><input type="checkbox" id="map-heat" name="heatmap"> Show density heatmap</label>
   <div id="mapid" data-mapdata-url="{{ url_for('public.map_data') }}"></div>
   <div id="mapstatus" class="muted">Loading map data…</div>
 </div>
@@ -23,5 +25,5 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-<script src="{{ url_for('static', filename='public-map.js') }}"></script>
+<script src="{{ url_for('static', filename='public-map.js', v='20261010-workflow-2') }}"></script>
 {% endblock %}
