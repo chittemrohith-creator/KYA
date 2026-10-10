@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Chairman Dashboard — CivicSync{% endblock %}
+{% block content %}
+<h1>Municipal Chairman dashboard</h1>
+<nav class="card">
+  <a href="{{ url_for('chairman.employees') }}">Employee verification</a> ·
+  <a href="{{ url_for('chairman.projects') }}">Project approvals</a> ·
+  <a href="{{ url_for('chairman.posts') }}">Post approvals</a> ·
+  <a href="{{ url_for('chairman.conflicts') }}">Conflicts</a> ·
+  <a href="{{ url_for('chairman.schedules') }}">Joint schedules</a> ·
+  <a href="{{ url_for('chairman.departments') }}">Department performance</a> ·
+  <a href="{{ url_for('chairman.audit_logs') }}">Audit logs</a> ·
+  <a href="{{ url_for('chairman.notifications') }}">Notifications</a>
+</nav>
+<div class="kpi">
+  <div><b>{{ stats.pending_employees }}</b>employees pending</div>
+  <div><b>{{ stats.pending_projects }}</b>projects pending</div>
+  <div><b>{{ stats.pending_posts }}</b>posts pending</div>
+  <div><b>{{ stats.open_conflicts }}</b>open conflicts</div>
+  <div><b>{{ stats.pending_schedules }}</b>schedules pending</div>
+  <div><b>{{ stats.delayed_projects }}</b>delayed</div>
+  <div><b>{{ stats.unexplained_delays }}</b>unexplained delays</div>
+</div>
+<form method="post" action="{{ url_for('chairman.run_sweep') }}" class="card">
+  <p class="muted">Run the delay sweep + 72h conflict escalation check (nightly job).</p>
+  <button type="submit">Run sweep now</button>
+</form>
+<h2>Conflict hotspots</h2>
+{% if hotspots %}<ul>{% for k, v in hotspots.items() %}<li>{{ k }} — {{ v }} conflict(s)</li>{% endfor %}</ul>
+{% else %}<p class="muted">No conflict hotspots.</p>{% endif %}
+<h2>Official statement (auto-published as Chairman decision)</h2>
+<form method="post" action="{{ url_for('chairman.statement') }}" class="card">
+  <label>Statement body *</label><textarea name="body" rows="3" required></textarea>
+  <button>Publish statement</button>
+</form>
+<h2>Recent notifications</h2>
+{% for n in notifications %}<div class="card"><b>{{ n.title }}</b><p>{{ n.body }}</p><p class="muted">{{ dt(n.created_at) }}</p></div>
+{% else %}<p class="muted">No notifications.</p>{% endfor %}
+{% endblock %}
