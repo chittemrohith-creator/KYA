@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — CivicSync{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{{ title }}</h1>
+  <p>{{ body }}</p>
+  {% if current_user_obj %}<a href="{{ url_for('public.home') }}">Home</a>
+  {% else %}<a href="{{ url_for('auth.login_page') }}">Log in</a>{% endif %}
+</div>
+{% endblock %}
