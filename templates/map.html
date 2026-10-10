@@ -8,6 +8,10 @@
     <span class="pin blue"></span> citizen reports
     <span class="pin orange"></span> conflict alerts
     <span class="pin purple"></span> coordinated work</p>
+  <label>Layer</label><select id="map-kind"><option value="">All layers</option><option value="project">Projects</option><option value="citizen_report">Citizen reports</option><option value="conflict">Conflicts</option><option value="joint">Joint work</option></select>
+  <label>Status</label><select id="map-filter-status"><option value="">All statuses</option><option>approved</option><option>in_progress</option><option>delayed</option><option>completed</option><option>verified_complete</option><option>published</option></select>
+  <label>Department</label><input id="map-department" placeholder="Filter department name">
+  <label><input type="checkbox" id="map-heat"> Show density heatmap</label>
   <div id="mapid" data-mapdata-url="{{ url_for('public.map_data') }}"></div>
   <div id="mapstatus" class="muted">Loading map data…</div>
 </div>
@@ -15,51 +19,9 @@
 {% block scripts %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-(function () {
-  const statusEl = document.getElementById("mapstatus");
-  const el = document.getElementById("mapid");
-  function load() {
-    fetch(el.dataset.mapdataUrl).then(r => {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(data => {
-      const pins = (data && data.pins) || [];
-      let map = null;
-      if (typeof L !== "undefined") {
-        map = L.map("mapid").setView([12.9756, 77.6051], 13);
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          { attribution: "© OpenStreetMap contributors" }).addTo(map);
-        if (!pins.length) { statusEl.textContent = "No mapped items yet."; }
-        else {
-          statusEl.textContent = pins.length + " items on the map.";
-          pins.forEach(p => {
-            const mk = L.circleMarker([p.lat, p.lng], { radius: 8, color: p.color, fillColor: p.color, fillOpacity: 0.7 });
-            const link = p.kind === "project" ? "/projects/" + p.id
-                       : p.kind === "citizen_report" ? "/citizen-reports/" + p.id
-                       : p.kind === "joint" ? "/joint-schedules/" + p.id : "/coordination";
-            mk.bindPopup("<b>" + p.title + "</b><br>" + (p.badge || "") +
-              (p.delayed_label ? "<br>" + p.delayed_label : "") +
-              "<br><a href='" + link + "'>Details</a>");
-            mk.addTo(map);
-          });
-        }
-      } else {
-        statusEl.textContent = "Map library unavailable (offline?). Showing list instead:";
-        renderList(pins);
-      }
-    }).catch(err => {
-      statusEl.textContent = "Could not load map data (" + err.message + "). Retry: ";
-      const b = document.createElement("button"); b.textContent = "Retry";
-      b.onclick = load; statusEl.appendChild(b);
-    });
-  }
-  function renderList(pins) {
-    const ul = document.createElement("ul");
-    pins.forEach(p => { const li = document.createElement("li"); li.textContent = p.title; ul.appendChild(li); });
-    document.getElementById("mapid").appendChild(ul);
-  }
-  load();
-})();
-</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="{{ url_for('static', filename='public-map.js') }}"></script>
 {% endblock %}
