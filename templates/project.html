@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}{{ p.title }} — CivicSync{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{{ p.title }}</h1>
+  <span class="badge official">✅ Verified Official — {{ p.department.name }}</span>
+  {{ m.status(p) }}
+  {% if delay_label %}<span class="badge delayed">{{ delay_label }}</span>{% endif %}
+  <p>{{ p.description }}</p>
+  <table>
+    <tr><th>Category</th><td>{{ p.category }}</td></tr>
+    <tr><th>Contractor</th><td><a href="{{ url_for('public.contractor_page', name=p.contractor_name) }}">{{ p.contractor_name or '—' }}</a></td></tr>
+    <tr><th>Budget</th><td>{{ '₹{:,.0f}'.format(p.budget) if p.budget else '—' }}</td></tr>
+    <tr><th>Timeline</th><td>{{ dd(p.start_date) }} → {{ dd(p.end_date) }}{% if p.actual_start_date %} · actual start {{ dd(p.actual_start_date) }}{% endif %}{% if p.actual_end_date %} · actual end {{ dd(p.actual_end_date) }}{% endif %}</td></tr>
+    <tr><th>Location</th><td>{{ p.address }}{% if p.ward %} · {{ p.ward }}{% endif %}{% if p.road_name %} · {{ p.road_name }}{% endif %}</td></tr>
+    <tr><th>Progress</th><td>{{ p.progress_percentage or 0 }}%</td></tr>
+    {% if p.delay_reason %}<tr><th>Delay reason</th><td>{{ p.delay_reason }}</td></tr>{% endif %}
+    {% if p.completion_note %}<tr><th>Completion note</th><td>{{ p.completion_note }}</td></tr>{% endif %}
+  </table>
+  <div class="progress"><div style="width: {{ p.progress_percentage or 0 }}%"></div></div>
+  <p class="muted">Approved by Municipal Chairman {{ dt(p.approved_at) }}. Employee identities are never shown publicly.</p>
+</div>
+
+{% if joint %}
+<h2>Coordinated work</h2>
+{% for js in joint %}
+<div class="card"><span class="badge joint">🤝 Coordinated Work — {{ js.location }}</span>
+<a href="{{ url_for('public.joint_schedule_page', jid=js.id) }}">View joint schedule #{{ js.id }}</a></div>
+{% endfor %}
+{% endif %}
+
+<h2>Coordination thread on this project</h2>
+{% for msg in messages %}
+<div class="msg {{ msg.message_type }}">
+  <b>[{{ msg.from_department.name if msg.from_department else 'System/Chairman' }}]</b>
+  <span class="status">{{ msg.message_type }}</span>
+  <p>{{ msg.body }}</p><p class="muted">{{ dt(msg.created_at) }} {{ msg.proposed_dates }}</p>
+</div>
+{% else %}<p class="muted">No coordination messages yet.</p>{% endfor %}
+
+<h2>Official posts about this project</h2>
+{% for post in posts %}
+<div class="card"><h3>{{ post.title }}</h3><p>{{ post.body }}</p>
+<span class="badge official">✅ Verified Official — {{ post.department.name }}</span>
+<p class="muted">Published {{ dt(post.published_at) }}</p></div>
+{% else %}<p class="muted">No official posts yet.</p>{% endfor %}
+
+<h2>Citizen reports linked to this project</h2>
+{% for r in reports %}
+<div class="card"><p>{{ r.body }}</p>
+<span class="badge citizen">👤 Citizen — Phone Verified</span>
+<a href="{{ url_for('public.citizen_report_page', cid=r.id) }}">Report #{{ r.id }}</a>
+{% if r.status == 'under_review' %}<span class="badge conflict">under review ({{ r.flag_count }} flags)</span>{% endif %}</div>
+{% else %}<p class="muted">No linked citizen reports.</p>{% endfor %}
+{% endblock %}
