@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% import "_macros.html" as m %}
-{% block title %}Coordination — Workspace{% endblock %}
+{% block title %}Coordination — Workspace<h2>Propose coordinated work</h2><p>Choose at least two nearby projects from different departments, including your own. Chairman approval is required.</p>
+<form method="post" action="{{ url_for('employee.propose_joint') }}" class="card"><label>Projects (select multiple)</label><select name="project_ids" multiple required>{% for p in joint_projects %}<option value="{{ p.id }}">{{ p.department.name }}: {{ p.title }} ({{ p.status }})</option>{% endfor %}</select><label>Location</label><input name="location" required><label>Start date</label><input name="start_date" type="date" required><label>End date</label><input name="end_date" type="date" required><label>Reason</label><textarea name="reason" required></textarea><button>Submit joint schedule</button></form>
+{% endblock %}
 {% block content %}
 <h1>Post to the Coordination Hub</h1>
 {{ m.flash_errors(error) }}
