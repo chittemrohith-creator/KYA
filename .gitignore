@@ -1,1 +1,20 @@
-(empty)
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+# Databases / instance data
+*.db
+*.sqlite3
+instance/
+
+# OS / editors
+.DS_Store
