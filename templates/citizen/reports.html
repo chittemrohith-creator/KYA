@@ -10,8 +10,11 @@
   <select name="category">{% for c in ['road','drainage','water','electricity','telecom','sewer','other'] %}
     <option value="{{ c }}" {% if form.get('category')==c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
   <label>Address / landmark</label><input name="address" value="{{ form.get('address','') }}">
-  <label>Latitude *</label><input name="latitude" type="number" step="0.000001" value="{{ form.get('latitude','') }}" required>
-  <label>Longitude *</label><input name="longitude" type="number" step="0.000001" value="{{ form.get('longitude','') }}" required>
+  <p>Enter an address / landmark, or click the map and drag the marker. An address-only report is not placed on the public map.</p>
+  <input type="hidden" id="report-lat" name="latitude" value="{{ form.get('latitude','') }}">
+  <input type="hidden" id="report-lon" name="longitude" value="{{ form.get('longitude','') }}">
+  <div id="report-map" style="height:300px"></div><p id="report-map-status" class="muted">Address-only reporting is available even if the map cannot load.</p>
+  <button type="button" id="clear-report-location" class="secondary">Clear map location / use address only</button>
   <label>Photo URL (optional proof)</label><input name="photo_url" value="{{ form.get('photo_url','') }}">
   <label>Link to an existing project (optional)</label>
   <select name="linked_project_id"><option value="">— none —</option>
@@ -37,4 +40,10 @@ Consider linking instead of re-reporting.</div>
 {% endif %}
 </div>
 {% else %}<p class="muted">You have no reports yet.</p>{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='report-map.js') }}"></script>
 {% endblock %}
