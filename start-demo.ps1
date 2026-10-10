@@ -1,10 +1,14 @@
-param([int]$Port = 5001)
+param([ValidateRange(1, 65535)][int]$Port = 5001)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
-$Python = Join-Path (Split-Path $PSScriptRoot -Parent) 'demo-venv/Scripts/python.exe'
-if (-not (Test-Path $Python)) { throw 'Sibling demo-venv is required. Create a Python venv and install requirements.txt.' }
+$Python = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
+if (-not (Test-Path $Python)) {
+    throw 'Repository .venv not found. From this folder run: python -m venv .venv'
+}
 & $Python -c "import flask, flask_sqlalchemy, bcrypt; from PIL import Image"
-if ($LASTEXITCODE -ne 0) { throw 'Install requirements.txt into the sibling demo-venv before starting.' }
+if ($LASTEXITCODE -ne 0) {
+    throw 'Missing dependencies. Run: .\.venv\Scripts\python.exe -m pip install -r requirements.txt'
+}
 $env:CIVICSYNC_PORT = "$Port"
-& $Python run.py
+& $Python (Join-Path $PSScriptRoot 'run.py')
 exit $LASTEXITCODE
