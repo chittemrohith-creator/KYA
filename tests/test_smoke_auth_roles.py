@@ -28,13 +28,13 @@ def test_pending_employee_cannot_access_workspace(client):
                     json={"employee_code": "WT-3003", "password": "water123"})
     assert r.status_code == 403
     assert "pending" in r.get_json()["error"].lower()
-    ws = client.get("/workspace")
-    assert ws.status_code == 302  # not logged in -> redirect to login
-    assert "/login" in ws.headers["Location"] or "/employee/login" in ws.headers["Location"]
+    ws = client.get("/workspace", follow_redirects=True)
+    assert "/employee/login" in ws.request.path  # landed on staff login page
+    assert "Department official login" in ws.get_data(as_text=True)
 
 
 def test_employee_dashboard(roads_client):
-    r = roads_client.get("/workspace")
+    r = roads_client.get("/workspace/", follow_redirects=True)
     assert r.status_code == 200
     body = r.get_data(as_text=True)
     assert "MG Road Relaying" in body
@@ -45,7 +45,7 @@ def test_employee_dashboard(roads_client):
 
 
 def test_chairman_dashboard(chairman_client):
-    r = chairman_client.get("/chairman")
+    r = chairman_client.get("/chairman/", follow_redirects=True)
     assert r.status_code == 200
     body = r.get_data(as_text=True)
     assert "Chairman" in body or "pending" in body.lower()
@@ -56,7 +56,7 @@ def test_chairman_dashboard(chairman_client):
 
 
 def test_admin_dashboard(admin_client):
-    r = admin_client.get("/admin")
+    r = admin_client.get("/admin/", follow_redirects=True)
     assert r.status_code == 200
     for path in ("/admin/departments", "/admin/users", "/admin/seed", "/admin/system"):
         assert admin_client.get(path).status_code == 200, path
@@ -75,20 +75,32 @@ def test_citizen_dashboard(citizen_client):
     assert "+919888888888" not in prof
 
 
+def _denied(client, path):
+    """GET path: must end up at a login page (via 302 auth redirect and/or the
+    app's strict-slash 308), never at the protected content."""
+    r = client.get(path, follow_redirects=True)
+    assert r.status_code == 200, (path, r.status_code)
+    assert "/login" in r.request.path, (path, r.request.path)
+
+
 def test_wrong_role_denied_or_redirected(client, roads_client, chairman_client, citizen_client):
+    # raw behavior: unauthenticated access issues an auth redirect (302)
+    anon = client.get("/chairman/")
+    assert anon.status_code == 302
+    assert "/login" in anon.headers["Location"]
     # anonymous -> redirected to login
-    assert client.get("/workspace").status_code == 302
-    assert client.get("/chairman").status_code == 302
-    assert client.get("/admin").status_code == 302
-    assert client.get("/dashboard").status_code == 302
+    _denied(client, "/workspace")
+    _denied(client, "/chairman")
+    _denied(client, "/admin")
+    _denied(client, "/dashboard")
     # employee cannot open chairman console / citizen dashboard
-    assert roads_client.get("/chairman").status_code == 302
-    assert roads_client.get("/dashboard").status_code == 302
+    _denied(roads_client, "/chairman")
+    _denied(roads_client, "/dashboard")
     # chairman cannot open employee workspace
-    assert chairman_client.get("/workspace").status_code == 302
+    _denied(chairman_client, "/workspace")
     # citizen cannot open any staff area
-    assert citizen_client.get("/workspace").status_code == 302
-    assert citizen_client.get("/chairman/audit-logs").status_code == 302
+    _denied(citizen_client, "/workspace")
+    _denied(citizen_client, "/chairman/audit-logs")
     # API RBAC: audit logs forbidden for non-chairman roles
     assert roads_client.get("/api/audit-logs").status_code == 403
     assert citizen_client.get("/api/audit-logs").status_code == 403

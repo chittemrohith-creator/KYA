@@ -32,6 +32,19 @@ def current_user():
     return db.session.get(User, uid)
 
 
+def _login_redirect(endpoint="auth.login_page"):
+    """302 (not Werkzeug's 308 strict-slash redirect) to a login page."""
+    return redirect(url_for(endpoint), code=302)
+
+
+def _staff_login_endpoint():
+    """Staff areas (/workspace, /chairman, /admin) send anonymous users to the
+    staff login page; citizen dashboard uses the citizen login page."""
+    first = request.path.split("/")[1] if request.path != "/" else ""
+    return "auth.employee_login_page" if first in ("workspace", "chairman", "admin") \
+        else "auth.login_page"
+
+
 def role_required(*roles, active_only=True):
     def deco(fn):
         from functools import wraps
@@ -42,7 +55,7 @@ def role_required(*roles, active_only=True):
             if u is None or u.role not in roles:
                 if request.path.startswith("/api/"):
                     return jsonify({"error": "Forbidden"}), 403
-                return redirect(url_for("auth.login_page"))
+                return _login_redirect(_staff_login_endpoint())
             if active_only and u.status != USER_STATUS_ACTIVE:
                 if request.path.startswith("/api/"):
                     return jsonify({"error": "Account not active"}), 403
