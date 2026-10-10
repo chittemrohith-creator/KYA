@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Joint Schedules — Chairman{% endblock %}
+{% block content %}
+<h1>Joint schedules awaiting approval</h1>
+<p class="muted">Only the Chairman approves coordinated work (rule 7).</p>
+{% for js in pending %}
+<div class="card">
+  <span class="badge joint">🤝 Coordinated Work — {{ js.location }}</span>
+  <p>Dates: {{ dd(js.approved_start_date) }} → {{ dd(js.approved_end_date) }} · Projects: {{ js.project_ids|join(', ') }} · Departments: {{ js.department_ids|join(', ') }}</p>
+  <p>Reason: {{ js.reason }}</p>
+  <form method="post" action="{{ url_for('chairman.approve_schedule', jid=js.id) }}"><button>Approve joint schedule</button></form>
+  <form method="post" action="{{ url_for('chairman.reject_schedule', jid=js.id) }}">
+    <input name="reason" placeholder="Rejection reason *" required style="width:auto;display:inline-block"><button class="secondary">Reject</button></form>
+</div>
+{% else %}<p class="muted">None pending.</p>{% endfor %}
+<h2>Decided</h2>
+<table><tr><th>Location</th><th>Status</th><th>Reason</th><th>No-shows</th></tr>
+{% for js in decided %}<tr><td>{{ js.location }}</td><td><span class="status">{{ js.status }}</span></td>
+<td>{{ js.rejection_reason or js.reason }}</td><td>{{ js.no_show_departments|join(', ') or '—' }}</td></tr>
+{% else %}<tr><td colspan="4" class="muted">Nothing decided.</td></tr>{% endfor %}</table>
+{% endblock %}
