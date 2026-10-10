@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Joint Schedules — CivicSync{% endblock %}
+{% block content %}
+<h1>Coordinated work schedules</h1>
+<p class="muted">Approved joint schedules only. Internal negotiation details stay private.</p>
+{% for js in schedules %}
+<div class="card">
+  <span class="badge joint">🤝 Coordinated Work — {{ js.location }}</span>
+  <p>Dates: {{ dd(js.approved_start_date) }} → {{ dd(js.approved_end_date) }} · Reason: {{ js.reason }}</p>
+  <p class="muted">Status: Approved by Municipal Chairman · {{ dt(js.approved_at) }}</p>
+  <a href="{{ url_for('public.joint_schedule_page', jid=js.id) }}">Details</a>
+</div>
+{% else %}<p class="muted">No approved joint schedules yet.</p>{% endfor %}
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Citizen Report #{{ cp.id }} — CivicSync{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Citizen report #{{ cp.id }}</h1>
+  <p>{{ cp.body }}</p>
+  {% if cp.photo_url %}<img src="{{ cp.photo_url }}" alt="report photo" style="max-width:100%">{% endif %}
+  <span class="badge citizen">👤 Citizen — Phone Verified</span>
+  <span class="status">{{ cp.status }}</span>
+  <p class="muted">{{ cp.category }} · {{ cp.address or 'no address' }} · filed {{ dt(cp.created_at) }}
+    {% if cp.flagged_by|length > 0 %} · {{ cp.flag_count }} flag(s){% endif %}
+    {% if cp.duplicate_suggested_post_id %} · linked to duplicate report #{{ cp.duplicate_suggested_post_id }}{% endif %}</p>
+  {% if cp.linked_project_id %}<p><a href="{{ url_for('public.project_page', pid=cp.linked_project_id) }}">Linked project #{{ cp.linked_project_id }}</a></p>{% endif %}
+</div>
+<h2>Official responses</h2>
+{% for r in responses %}
+<div class="card"><p>{{ r.body }}</p><span class="badge official">✅ Verified Official — {{ r.department.name }}</span>
+<p class="muted">Approved {{ dt(r.approved_at) }}</p></div>
+{% else %}<p class="muted">No official response yet.</p>{% endfor %}
+{% if current_user_obj and current_user_obj.role == 'citizen' %}
+<form method="post" action="{{ url_for('citizen.flag_report', cid=cp.id) }}"><button class="secondary">Flag this report</button></form>
+{% endif %}
+{% if current_user_obj and current_user_obj.role == 'chairman' %}
+<form method="post" action="{{ url_for('chairman.remove_report', cid=cp.id) }}">
+  <label>Removal reason (required)</label><input name="reason" required>
+  <button class="secondary">Remove report</button></form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Post Approvals — Chairman{% endblock %}
+{% block content %}
+<h1>Official posts awaiting approval</h1>
+<p class="muted">Nothing publishes without your approval (rules 1 &amp; 5). Rejections require a reason.</p>
+{% for post in pending %}
+<div class="card">
+  <h3>{{ post.title }}</h3><p>{{ post.body }}</p>
+  <span class="badge official">{{ post.department.name }}</span>
+  <p class="muted">Submitted by {{ post.employee.full_name }} ({{ post.employee.employee_code }}) — internal attribution only · {{ dt(post.submitted_at) }}</p>
+  <form method="post" action="{{ url_for('chairman.approve_post', post_id=post.id) }}"><button>Approve &amp; publish</button></form>
+  <form method="post" action="{{ url_for('chairman.reject_post', post_id=post.id) }}">
+    <input name="reason" placeholder="Rejection reason *" required style="width:auto;display:inline-block"><button class="secondary">Reject</button></form>
+</div>
+{% else %}<p class="muted">Queue is empty.</p>{% endfor %}
+<h2>Official responses to citizen reports awaiting approval</h2>
+{% for r in responses_pending %}
+<div class="card"><p>{{ r.body }}</p><span class="badge official">{{ r.department.name }}</span>
+<p class="muted">On citizen report #{{ r.citizen_post_id }}</p>
+<form method="post" action="{{ url_for('chairman.approve_response', rid=r.id) }}"><button>Approve response</button></form></div>
+{% else %}<p class="muted">No responses pending.</p>{% endfor %}
+<h2>Recently decided</h2>
+<table><tr><th>Title</th><th>Department</th><th>Status</th><th>Reason</th></tr>
+{% for post in recent %}<tr><td>{{ post.title }}</td><td>{{ post.department.name }}</td>
+<td><span class="status">{{ post.status }}</span></td><td>{{ post.rejection_reason or '—' }}</td></tr>{% else %}
+<tr><td colspan="4" class="muted">Nothing yet.</td></tr>{% endfor %}</table>
+{% endblock %}

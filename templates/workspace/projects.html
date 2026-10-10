@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Department Projects — CivicSync{% endblock %}
+{% block content %}
+<h1>Department projects</h1>
+<p><a class="btn" href="{{ url_for('employee.new_project') }}">+ New draft project</a></p>
+<table>
+  <tr><th>Title</th><th>Status</th><th>Conflict flagged</th><th>Dates</th><th>Progress</th></tr>
+  {% for p in projects %}
+  <tr><td><a href="{{ url_for('employee.project_detail', pid=p.id) }}">{{ p.title }}</a></td>
+      <td><span class="status">{{ p.status }}</span></td>
+      <td>{% if p.conflict_flagged %}⚠️ Yes{% else %}—{% endif %}</td>
+      <td>{{ dd(p.start_date) }} → {{ dd(p.end_date) }}</td>
+      <td>{{ p.progress_percentage or 0 }}%</td></tr>
+  {% else %}<tr><td colspan="5" class="muted">No projects. Draft one — it stays private until the Chairman approves.</td></tr>{% endfor %}
+</table>
+{% endblock %}

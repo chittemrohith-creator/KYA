@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Employee Registration — CivicSync{% endblock %}
+{% block content %}
+<div class="card" style="max-width:520px">
+  <h1>Register as a department employee</h1>
+  <p class="muted">After submission your status is <code>pending_verification</code>. Only the Municipal Chairman can approve or reject. Your identity is stored for audit but never shown publicly.</p>
+  <div id="msg"></div>
+  <label>Full name</label><input id="full_name">
+  <label>Employee code</label><input id="employee_code">
+  <label>Department</label>
+  <select id="department">{% for d in departments %}<option value="{{ d.slug }}">{{ d.name }}</option>{% endfor %}</select>
+  <label>Designation</label><input id="designation">
+  <label>Official email</label><input id="email" type="email">
+  <label>Phone (with country code)</label><input id="phone" placeholder="+91…">
+  <label>Password</label><input id="password" type="password">
+  <button id="submit">Submit registration</button>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("submit").onclick=async()=>{
+  const g=id=>document.getElementById(id).value.trim();
+  const r=await fetch("/api/register/employee",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({full_name:g("full_name"),employee_code:g("employee_code"),department:g("department"),
+      designation:g("designation"),email:g("email"),phone:g("phone"),password:document.getElementById("password").value})});
+  const j=await r.json();
+  document.getElementById("msg").innerHTML=j.error?'<div class="error">'+j.error+'</div>':'<div class="ok">'+j.message+'</div>';
+};
+</script>
+{% endblock %}

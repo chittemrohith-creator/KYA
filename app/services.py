@@ -515,14 +515,29 @@ def haversine_meters(lat1, lon1, lat2, lon2):
     return 2 * R * math.asin(math.sqrt(a))
 
 
+def _category_group(c):
+    """Map a project/report category to its conflict group per spec section 14,
+    condition 4: 'same/adjacent category (both road-related or underground utilities)'.
+
+    Road works are adjacent to underground utility work — a road being relayed
+    conflicts with drainage/water/telecom digging the same stretch (the exact
+    repeated-digging scenario the spec describes), so 'road' also counts as
+    utility-adjacent. Sanitation (surface/collection service) is unrelated."""
+    s = (c or "").lower()
+    if s in ROAD_CATEGORIES:
+        return "road_or_ug"
+    if s in UNDERGROUND_CATEGORIES:
+        return "ug"
+    return None
+
+
 def categories_related(a, b):
-    """Condition 4: same/adjacent category (both road-related or both underground utilities)."""
-    if a == b:
-        return True
-    sa, sb = (a or "").lower(), (b or "").lower()
-    group_a = "road" if sa in ROAD_CATEGORIES else "ug" if sa in UNDERGROUND_CATEGORIES or sa in {"water", "drainage", "telecom", "electricity", "sewer", "fiber", "gas"} else None
-    group_b = "road" if sb in ROAD_CATEGORIES else "ug" if sb in UNDERGROUND_CATEGORIES or sb in {"water", "drainage", "telecom", "electricity", "sewer", "fiber", "gas"} else None
-    return group_a is not None and group_a == group_b
+    """Condition 4: same/adjacent category (both road-related or underground utilities)."""
+    ga, gb = _category_group(a), _category_group(b)
+    if ga is None or gb is None:
+        return False
+    # road <-> underground utilities are adjacent; ug <-> ug are the same group
+    return {ga, gb} <= {"ug", "road_or_ug"}
 
 
 def dates_overlap(a_start, a_end, b_start, b_end):
@@ -820,8 +835,18 @@ def begin_citizen_signup(phone):
     return u, otp  # OTP returned here only because there is no SMS gateway in demo
 
 
+def _as_utc(dt):
+    """SQLite returns naive datetimes; keep comparisons against utcnow() consistent."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def verify_citizen_otp(user, otp, display_name=None):
-    if user.otp_expires_at is None or utcnow() > user.otp_expires_at:
+    expires = _as_utc(user.otp_expires_at)
+    if expires is None or utcnow() > expires:
         raise BusinessRuleError("OTP expired. Request a new code.")
     if user.otp_attempts >= OTP_MAX_ATTEMPTS:
         raise BusinessRuleError("Too many incorrect attempts. OTP expired.")

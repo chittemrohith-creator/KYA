@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Project Approvals — Chairman{% endblock %}
+{% block content %}
+<h1>Projects awaiting approval</h1>
+{% for p in pending %}
+<div class="card">
+  <h3>{{ p.title }}</h3><p>{{ p.description }}</p>
+  <p class="muted">{{ p.department.name }} · {{ p.category }} · {{ dd(p.start_date) }} → {{ dd(p.end_date) }} · {{ p.address }}
+     {% if p.conflict_flagged %}<span class="badge conflict">⚠️ Conflict Detected</span>{% endif %}</p>
+  <form method="post" action="{{ url_for('chairman.approve_project', pid=p.id) }}"><button>Approve &amp; publish</button></form>
+  <form method="post" action="{{ url_for('chairman.reject_project', pid=p.id) }}">
+    <input name="reason" placeholder="Rejection reason *" required style="width:auto;display:inline-block"><button class="secondary">Reject</button></form>
+</div>
+{% else %}<p class="muted">No projects pending.</p>{% endfor %}
+<h2>Delayed projects (every delay needs a published reason)</h2>
+{% for p in delayed %}
+<div class="card"><b>{{ p.title }}</b> <span class="muted">{{ p.department.name }} · due {{ dd(p.end_date) }}</span>
+{% if p.unexplained_delay %}<span class="badge delayed">⚠️ Delayed — Reason Pending</span>{% elif p.delay_reason %}<p class="muted">Reason: {{ p.delay_reason }}</p>{% endif %}
+<form method="post" action="{{ url_for('chairman.override_project', pid=p.id) }}">
+  <select name="status">{% for s in ['cancelled','delayed','in_progress','completed'] %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+  <input name="reason" placeholder="Override reason *" style="width:auto;display:inline-block">
+  <button class="secondary">Override status</button></form>
+{% if p.status == 'completed' %}{% endif %}
+</div>
+{% else %}<p class="muted">No delayed projects.</p>{% endfor %}
+{% endblock %}

@@ -200,7 +200,10 @@ class OfficialResponse(db.Model):
 class CoordinationMessage(db.Model):
     __tablename__ = "coordination_messages"
     id = db.Column(db.Integer, primary_key=True)
-    from_department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=False)
+    # from_department_id is NULL for system-generated messages (conflict_alert),
+    # Chairman statements (decision) and joint-schedule notices — see services.detect_conflicts
+    # and views_chairman.statement. Employee department messages always set it.
+    from_department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=True)
     to_department_ids = db.Column(db.JSON, default=list)  # multiple recipients
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"))
     thread_id = db.Column(db.Integer, db.ForeignKey("coordination_messages.id"))

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Workspace — {{ u.department.name }}{% endblock %}
+{% block content %}
+<h1>{{ u.department.name }} workspace</h1>
+<p class="muted">Signed in as {{ u.full_name }} ({{ u.employee_code }}) — internal only, never public. Nothing is published without Municipal Chairman approval.</p>
+<nav class="card">
+  <a href="{{ url_for('employee.projects') }}">Projects</a> ·
+  <a href="{{ url_for('employee.new_project') }}">New project</a> ·
+  <a href="{{ url_for('employee.posts') }}">Official posts</a> ·
+  <a href="{{ url_for('employee.new_post') }}">New post</a> ·
+  <a href="{{ url_for('employee.coordination') }}">Coordination</a> ·
+  <a href="{{ url_for('employee.reports') }}">Citizen reports</a> ·
+  <a href="{{ url_for('employee.notifications') }}">Notifications</a>
+</nav>
+<div class="kpi">
+  <div><b>{{ projects|length }}</b>department projects</div>
+  <div><b>{{ posts|length }}</b>official posts</div>
+  <div><b>{{ conflicts|length }}</b>conflicts touching this dept</div>
+</div>
+<h2>Projects (all statuses incl. drafts)</h2>
+<table>
+  <tr><th>Title</th><th>Status</th><th>Dates</th><th>Progress</th></tr>
+  {% for p in projects %}
+  <tr><td><a href="{{ url_for('employee.project_detail', pid=p.id) }}">{{ p.title }}</a></td>
+      <td><span class="status">{{ p.status }}</span>{% if p.unexplained_delay %} <span class="badge delayed">⚠️ Reason Pending</span>{% endif %}</td>
+      <td>{{ dd(p.start_date) }} → {{ dd(p.end_date) }}</td><td>{{ p.progress_percentage or 0 }}%</td></tr>
+  {% else %}<tr><td colspan="4" class="muted">No projects yet.</td></tr>{% endfor %}
+</table>
+<h2>Recent notifications</h2>
+{% for n in notifications %}
+<div class="card"><b>{{ n.title }}</b><p>{{ n.body }}</p><p class="muted">{{ dt(n.created_at) }}</p></div>
+{% else %}<p class="muted">No notifications.</p>{% endfor %}
+{% endblock %}

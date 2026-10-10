@@ -32,6 +32,19 @@ def current_user():
     return db.session.get(User, uid)
 
 
+def _login_redirect(endpoint="auth.login_page"):
+    """302 (not Werkzeug's 308 strict-slash redirect) to a login page."""
+    return redirect(url_for(endpoint), code=302)
+
+
+def _staff_login_endpoint():
+    """Staff areas (/workspace, /chairman, /admin) send anonymous users to the
+    staff login page; citizen dashboard uses the citizen login page."""
+    first = request.path.split("/")[1] if request.path != "/" else ""
+    return "auth.employee_login_page" if first in ("workspace", "chairman", "admin") \
+        else "auth.login_page"
+
+
 def role_required(*roles, active_only=True):
     def deco(fn):
         from functools import wraps
@@ -42,7 +55,7 @@ def role_required(*roles, active_only=True):
             if u is None or u.role not in roles:
                 if request.path.startswith("/api/"):
                     return jsonify({"error": "Forbidden"}), 403
-                return redirect(url_for("auth.login_page"))
+                return _login_redirect(_staff_login_endpoint())
             if active_only and u.status != USER_STATUS_ACTIVE:
                 if request.path.startswith("/api/"):
                     return jsonify({"error": "Account not active"}), 403
@@ -78,6 +91,13 @@ def seed_all(app, demo=True):
     """Seed departments + pre-seeded Chairman/Admin. Optionally demo accounts & MG Road scenario."""
     with app.app_context():
         db.create_all()
+        # Backfill employee codes for Chairman/Admin rows created by older seeds (staff login needs a code).
+        _legacy = User.query.filter(User.role.in_([ROLE_CHAIRMAN, ROLE_ADMIN]),
+                                    User.employee_code.is_(None)).all()
+        if _legacy:
+            for lu in _legacy:
+                lu.employee_code = "CH-0001" if lu.role == ROLE_CHAIRMAN else "AD-0001"
+            db.session.commit()
         secret = app.config["APP_SECRET"]
         dept_map = {}
         for name, slug in DEFAULT_DEPARTMENTS:
@@ -95,6 +115,7 @@ def seed_all(app, demo=True):
         if not User.query.filter_by(role=ROLE_CHAIRMAN).first():
             chair = User(role=ROLE_CHAIRMAN, full_name="Municipal Chairman",
                          display_name="Municipal Chairman",
+                         employee_code="CH-0001",  # staff login accepts code or official email; pre-seeded roles need a code too
                          email="chairman@civic.municipality",
                          phone_hash=services.hash_phone("+919000000001", secret),
                          phone_encrypted=services.encrypt_phone("+919000000001", secret),
@@ -103,6 +124,7 @@ def seed_all(app, demo=True):
             db.session.add(chair)
         if not User.query.filter_by(role=ROLE_ADMIN).first():
             adm = User(role=ROLE_ADMIN, full_name="System Administrator",
+                       employee_code="AD-0001",
                        email="admin@civic.municipality",
                        phone_hash=services.hash_phone("+919000000002", secret),
                        phone_encrypted=services.encrypt_phone("+919000000002", secret),
@@ -217,6 +239,8 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
+    from .bootstrap import configure_app_paths
+    configure_app_paths(app)  # templates/ and static/ live at the repository root
     set_app_secret(app.config["APP_SECRET"])
     db.init_app(app)
 

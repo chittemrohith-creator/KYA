@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}New Official Post — Workspace{% endblock %}
+{% block content %}
+<h1>New draft official post</h1>
+{{ m.flash_errors(error) }}
+<form method="post" class="card">
+  <label>Title *</label><input name="title" required>
+  <label>Body *</label><textarea name="body" rows="6" required></textarea>
+  <label>Link to department project (optional)</label>
+  <select name="project_id"><option value="">— none —</option>
+    {% for p in projects %}<option value="{{ p.id }}">{{ p.title }} ({{ p.status }})</option>{% endfor %}</select>
+  <label><input type="checkbox" name="submit_now" value="1"> Submit to Chairman immediately</label>
+  <button type="submit">Create draft</button>
+</form>
+<p class="muted">Published posts carry “✅ Verified Official — {{ u.department.name if u else '' }}”; your name is never shown publicly. Published posts cannot be edited — corrections are new posts.</p>
+{% endblock %}

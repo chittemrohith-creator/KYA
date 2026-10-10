@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Coordination Hub — CivicSync{% endblock %}
+{% block content %}
+<h1>Coordination Hub</h1>
+<p class="muted">Public, permanent wall of inter-department communication. Only verified officials can post; everyone can read. Employee identities are hidden — messages are attributed to departments.</p>
+{% for msg in messages %}
+<div class="msg {{ msg.message_type }}">
+  <b>[{{ msg.from_department.name if msg.from_department else ('Municipal Chairman' if msg.message_type=='decision' else 'System') }}]</b>
+  <span class="status">{{ msg.message_type }}</span>
+  {% if msg.to_department_ids %}<span class="muted">→ {% for did in msg.to_department_ids %}{% set d = namespace(found=None) %}{% for dep in departments if dep.id == did %}{% set d.found = dep.name %}{% endfor %}{{ d.found or ('#'+did|string) }}{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+  <p>{{ msg.body }}</p>
+  <p class="muted">{% if msg.project_id %}<a href="{{ url_for('public.project_page', pid=msg.project_id) }}">Project #{{ msg.project_id }}</a> · {% endif %}{{ msg.proposed_dates }} {{ msg.location }} · {{ dt(msg.created_at) }}</p>
+</div>
+{% else %}<p class="muted">No coordination messages yet.</p>{% endfor %}
+{% endblock %}

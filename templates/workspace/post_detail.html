@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}{{ post.title }} — Workspace{% endblock %}
+{% block content %}
+<h1>{{ post.title }}</h1>
+<span class="status">{{ post.status }}</span>
+{% if post.rejection_reason %}<div class="error">Chairman rejection reason: {{ post.rejection_reason }}</div>{% endif %}
+{{ m.flash_errors(error) }}
+<div class="card"><p>{{ post.body }}</p>
+<p class="muted">{{ post.department.name }} · created {{ dt(post.created_at) }} · submitted {{ dt(post.submitted_at) }} · published {{ dt(post.published_at) }}</p></div>
+{% if post.status in ('draft', 'rejected') %}
+<form method="post" class="card"><input type="hidden" name="action" value="edit">
+  <label>Edit title</label><input name="title" value="{{ post.title }}">
+  <label>Edit body</label><textarea name="body" rows="6">{{ post.body }}</textarea>
+  <button class="secondary">Save as draft</button></form>
+<form method="post" class="card"><input type="hidden" name="action" value="submit"><button>Submit to Chairman</button></form>
+{% elif post.status == 'published' %}
+<p class="muted">Published posts are permanent and cannot be edited. Post a correction referencing this post instead.</p>
+{% endif %}
+{% endblock %}

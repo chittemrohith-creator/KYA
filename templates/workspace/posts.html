@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Official Posts — Workspace{% endblock %}
+{% block content %}
+<h1>Department official posts</h1>
+<p><a class="btn" href="{{ url_for('employee.new_post') }}">+ New draft post</a></p>
+<table>
+  <tr><th>Title</th><th>Status</th><th>Submitted</th><th>Rejection reason</th></tr>
+  {% for post in posts %}
+  <tr><td><a href="{{ url_for('employee.post_detail', post_id=post.id) }}">{{ post.title }}</a></td>
+      <td><span class="status">{{ post.status }}</span></td>
+      <td>{{ dt(post.submitted_at) }}</td>
+      <td>{{ post.rejection_reason or '—' }}</td></tr>
+  {% else %}<tr><td colspan="4" class="muted">No posts yet. Draft one — it publishes only after Chairman approval.</td></tr>{% endfor %}
+</table>
+{% endblock %}

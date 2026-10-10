@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}{{ dept.name }} — CivicSync{% endblock %}
+{% block content %}
+<h1>{{ dept.name }}</h1>
+<p class="muted">{{ dept.description }} · Office: {{ dept.office_address }} · {{ dept.contact_phone }}</p>
+<h2>Public projects</h2>
+{% if projects %}<div class="grid">{% for p in projects %}{{ m.project_card(p) }}{% endfor %}</div>
+{% else %}<p class="muted">No public projects from this department yet.</p>{% endif %}
+<h2>Official posts</h2>
+{% for post in posts %}
+  <div class="card"><h3>{{ post.title }}</h3><p>{{ post.body }}</p>
+    <span class="badge official">✅ Verified Official — {{ dept.name }}</span>
+    <p class="muted">Published {{ dt(post.published_at) }}</p></div>
+{% else %}<p class="muted">No published posts.</p>{% endfor %}
+<h2>Coordination messages</h2>
+{% for msg in messages %}
+  <div class="msg {{ msg.message_type }}">
+    <b>[{{ msg.from_department.name if msg.from_department else 'System' }}]</b>
+    <span class="status">{{ msg.message_type }}</span>
+    <p>{{ msg.body }}</p>
+    <p class="muted">{{ msg.proposed_dates }} {{ msg.location }} · {{ dt(msg.created_at) }}</p>
+  </div>
+{% else %}<p class="muted">No coordination messages involving this department.</p>{% endfor %}
+{% endblock %}

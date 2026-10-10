@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Joint Schedule #{{ js.id }} — CivicSync{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>🤝 Coordinated Work — {{ js.location }}</h1>
+  <table>
+    <tr><th>Departments</th><td>{% for d in departments %}{{ d.name }}{% if not loop.last %} + {% endif %}{% endfor %}</td></tr>
+    <tr><th>Dates</th><td>{{ dd(js.approved_start_date) }} → {{ dd(js.approved_end_date) }}</td></tr>
+    <tr><th>Reason</th><td>{{ js.reason }}</td></tr>
+    <tr><th>Status</th><td>{{ js.status }}{% if js.status == 'approved' %} — Approved by Municipal Chairman{% endif %}</td></tr>
+    <tr><th>Approved</th><td>{{ dt(js.approved_at) }}</td></tr>
+  </table>
+  {% if js.no_show_departments %}
+  <div class="error">No-show logged for department(s):
+    {% for did in js.no_show_departments %}#{% set n = namespace(v='') %}{% for d in departments if d.id == did %}{% set n.v = d.name %}{% endfor %}{{ n.v or did }}{% if not loop.last %}, {% endif %}{% endfor %}</div>
+  {% endif %}
+</div>
+<h2>Linked projects</h2>
+{% for p in projects %}{% if p %}
+<div class="card"><a href="{{ url_for('public.project_page', pid=p.id) }}">{{ p.title }}</a>
+<span class="status">{{ p.status }}</span> <span class="muted">{{ p.department.name }}</span></div>
+{% endif %}{% endfor %}
+{% endblock %}
