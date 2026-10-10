@@ -2,26 +2,74 @@
 {% import "_macros.html" as m %}
 {% block title %}CivicSync — Public works, in the open{% endblock %}
 {% block content %}
-<div class="card">
-  <h1>Municipal public works — coordinated in the open</h1>
-  <p>Verified departments plan and negotiate publicly. Every official post and project requires Municipal Chairman approval. Citizens report issues with phone-verified identity.</p>
-  <div class="kpi">
+
+<section class="hero" data-parallax aria-label="Welcome">
+  <div class="city-stage" aria-hidden="true">
+    <div class="city-layer back">
+      <svg viewBox="0 0 560 320" role="img" focusable="false">
+        <g opacity=".9">
+          <polygon points="70,180 130,150 130,90 70,120" fill="#bfe3f2"/><polygon points="130,150 190,180 190,120 130,90" fill="#9ed2e8"/><polygon points="70,120 130,90 190,120 130,150" fill="#d8f1fa"/>
+          <polygon points="210,200 250,180 250,110 210,130" fill="#cdeadd"/><polygon points="250,180 290,200 290,130 250,110" fill="#a9dccd"/><polygon points="210,130 250,110 290,130 250,150" fill="#e2f6ef"/>
+          <polygon points="330,190 380,165 380,120 330,145" fill="#f6e7c1"/><polygon points="380,165 430,190 430,145 380,120" fill="#eed49a"/><polygon points="330,145 380,120 430,145 380,170" fill="#fbf3dd"/>
+          <polygon points="450,205 490,185 490,140 450,160" fill="#bfe3f2"/><polygon points="490,185 530,205 530,160 490,140" fill="#9ed2e8"/><polygon points="450,160 490,140 530,160 490,180" fill="#d8f1fa"/>
+        </g>
+      </svg>
+    </div>
+    <div class="city-layer mid">
+      <svg viewBox="0 0 560 320" role="img" focusable="false">
+        <polygon points="150,250 230,210 230,120 150,160" fill="#8ecae6"/><polygon points="230,210 310,250 310,160 230,120" fill="#5aa9d6"/><polygon points="150,160 230,120 310,160 230,200" fill="#c9e9f7"/>
+        <rect x="196" y="176" width="14" height="18" transform="skewY(28) translate(-60 -120)" fill="#dff4ff"/>
+        <polygon points="360,260 420,230 420,170 360,200" fill="#7fd1c1"/><polygon points="420,230 480,260 480,200 420,170" fill="#4cb8a4"/><polygon points="360,200 420,170 480,200 420,230" fill="#c3efe6"/>
+      </svg>
+    </div>
+    <div class="city-layer front">
+      <svg viewBox="0 0 560 320" role="img" focusable="false">
+        <polygon points="40,300 520,60 560,80 80,320" fill="#e2e8f0"/>
+        <polygon points="60,305 515,70 520,73 68,310" fill="#cbd5e1"/>
+        <g stroke="#94a3b8" stroke-width="1" stroke-dasharray="10 8"><line x1="80" y1="300" x2="520" y2="72"/></g>
+        <polygon points="120,270 150,255 150,215 120,230" fill="#fbbf24"/><polygon points="150,255 180,270 180,230 150,215" fill="#d97706"/><polygon points="120,230 150,215 180,230 150,245" fill="#fde68a"/>
+        <circle cx="250" cy="240" r="16" fill="#34d399"/><polygon points="250,240 250,258 246,258 246,244" fill="#92400e"/>
+        <circle cx="300" cy="222" r="12" fill="#10b981"/><polygon points="300,222 300,236 297,236 297,225" fill="#92400e"/>
+        <circle cx="430" cy="160" r="15" fill="#34d399"/><polygon points="430,160 430,178 426,178 426,164" fill="#92400e"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="hero-inner">
+    <h1>Municipal public works — coordinated in the open</h1>
+    <p class="lede">Verified departments plan and negotiate publicly. Every official post and project requires Municipal Chairman approval. Citizens report issues with phone-verified identity.</p>
+    <div class="hero-cta">
+      <a class="btn" href="{{ url_for('public.projects_list') }}">View Projects</a>
+      <a class="btn ghost" href="{{ url_for('public.map_page') }}">Explore Map</a>
+      <a class="btn amber" href="{{ url_for('auth.signup_page') }}">Report an Issue</a>
+    </div>
+  </div>
+
+  {% if projects %}
+  <div class="hero-highlight reveal">
+    🔦 Now visible on the public map:
+    <a href="{{ url_for('public.project_page', pid=projects[0].id) }}"><b>{{ projects[0].title }}</b></a>
+    — {{ projects[0].department.name }} · {{ m.status(projects[0]) }}
+  </div>
+  {% endif %}
+
+  <div class="kpi hero-metrics" aria-label="Live platform metrics">
     <div><b>{{ projects|length }}</b>featured projects</div>
     <div><b>{{ conflict_count }}</b>open conflicts</div>
     <div><b>{{ joint_count }}</b>approved joint schedules</div>
     <div><b>{{ departments|length }}</b>departments</div>
   </div>
-</div>
+</section>
 
 <h2>Featured projects</h2>
-{% if projects %}<div class="grid">{% for p in projects %}{{ m.project_card(p) }}{% endfor %}</div>
+{% if projects %}<div class="grid">{% for p in projects %}<div class="tiltable">{{ m.project_card(p) }}</div>{% endfor %}</div>
 {% else %}<p class="muted">No public projects yet.</p>{% endif %}
 
 <div class="grid">
   <div>
     <h2>Latest official posts</h2>
     {% for post in posts %}
-      <div class="card"><h3>{{ post.title }}</h3>
+      <div class="card reveal"><h3>{{ post.title }}</h3>
         <p>{{ post.body[:200] }}</p>
         <span class="badge official">✅ Verified Official — {{ post.department.name }}</span>
         <p class="muted">Approved {{ dt(post.approved_at) }}</p></div>
@@ -30,7 +78,7 @@
   <div>
     <h2>Recent citizen reports</h2>
     {% for r in reports %}
-      <div class="card"><p>{{ r.body[:140] }}</p>
+      <div class="card reveal"><p>{{ r.body[:140] }}</p>
         <a href="{{ url_for('public.citizen_report_page', cid=r.id) }}">View report #{{ r.id }}</a>
         <span class="badge citizen">👤 Citizen — Phone Verified</span></div>
     {% else %}<p class="muted">No citizen reports yet.</p>{% endfor %}
