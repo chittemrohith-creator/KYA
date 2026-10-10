@@ -187,3 +187,21 @@ Demo credentials: Chairman CH-0001 / chairman123; Admin AD-0001 / admin123; Road
 
 ### Important boundaries
 Development demonstration only: demo OTP disclosure, default development secrets, demo-grade phone obfuscation, Flask development server, and no production CSRF/rate limiting or SMS provider. Do not expose publicly. Map tiles/libraries are third-party network resources; no address is sent for geocoding. Delay sweep is manual via Chairman console, not a hosted scheduled job. Uploaded files are local and need backup in a real deployment. Real-world browser/device coverage, accessibility audits and production load/security testing are not claimed.
+
+## UI theme (bright modern civic redesign)
+
+The interface uses a light warm-white canvas with a sky-blue/teal civic palette, restrained amber accents,
+layered rounded cards and a CSS/SVG isometric hero on the homepage. All styling is local
+(`static/style.css`, system fonts only — no external font or CSS frameworks).
+
+- Hero parallax, card tilt and scroll-reveal are **decorative progressive enhancements**: every page
+  renders fully server-side and remains usable without JavaScript.
+- Animations honor `prefers-reduced-motion: reduce` (CSS + JS) and pointer effects are disabled on touch devices.
+- Keyboard users get a skip-to-content link and visible focus rings; the map keeps its own gestures
+  (pan/zoom/clustering/heat layer) independent from decorative animation.
+- Homepage KPI numbers are computed live from the database (projects, open conflicts, approved joint
+  schedules, departments) — never hardcoded.
+- Map page continues to use Leaflet 1.9.4 + markercluster + leaflet.heat from CDN with graceful
+  offline failure messages; tiles require internet, filters/pins degrade cleanly without it.
+- Verified by `tests/test_redesign_ui.py` (hero/CTAs, real-data metrics, theme tokens, reduced-motion,
+  auth-page form ids preserved, map wiring preserved).
