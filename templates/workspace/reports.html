@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Citizen Reports — Workspace{% endblock %}
+{% block content %}
+<h1>Citizen reports needing response</h1>
+<p class="muted">Responses you draft go to the Chairman for approval before citizens see them. Citizen phone numbers are never visible.</p>
+{% for cp in posts %}
+<div class="card">
+  <p>{{ cp.body }}</p>
+  <span class="badge citizen">👤 Citizen — Phone Verified</span>
+  <span class="status">{{ cp.status }}</span>
+  {% if cp.flag_count %}<span class="badge conflict">{{ cp.flag_count }} flags</span>{% endif %}
+  <p class="muted">{{ cp.category }} · {{ cp.address or 'no address' }} · filed {{ dt(cp.created_at) }}
+    {% if cp.linked_project_id %} · project #{{ cp.linked_project_id }}{% endif %}</p>
+  <form method="post" action="{{ url_for('employee.respond_report', cid=cp.id) }}">
+    <label>Official response (goes to Chairman queue)</label>
+    <textarea name="body" rows="3" required></textarea>
+    <button>Send for approval</button>
+  </form>
+</div>
+{% else %}<p class="muted">No open citizen reports.</p>{% endfor %}
+{% endblock %}
