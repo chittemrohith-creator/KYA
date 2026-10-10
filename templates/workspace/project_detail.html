@@ -25,8 +25,8 @@
 {% elif p.status in ('in_progress', 'delayed') %}
 <form method="post" class="card"><input type="hidden" name="action" value="progress">
   <label>Update progress (%)</label><input name="progress" type="number" min="0" max="100" value="{{ p.progress_percentage or 0 }}"><button>Save</button></form>
-<form method="post" class="card"><input type="hidden" name="action" value="complete">
-  <label>Completion photo URL * (proof required — rule 17)</label><input name="photo_url" required>
+<form method="post" enctype="multipart/form-data" class="card"><input type="hidden" name="action" value="complete">
+  <label>Completion proof image (JPEG, PNG or WebP; max 5 MB)</label><input name="photo" type="file" accept="image/jpeg,image/png,image/webp">
   <label>Completion note *</label><textarea name="note" required></textarea>
   <button>Mark completed</button></form>
 {% endif %}
