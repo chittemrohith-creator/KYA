@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Citizen Reports — CivicSync{% endblock %}
+{% block content %}
+<h1>Citizen reports</h1>
+<p class="muted">Phone-verified citizens only. Phones are never displayed.</p>
+{% for cp in posts %}
+<div class="card">
+  <p>{{ cp.body }}</p>
+  <span class="badge citizen">👤 Citizen — Phone Verified</span>
+  <span class="status">{{ cp.status }}</span>
+  {% if cp.status == 'under_review' %}<span class="badge conflict">{{ cp.flag_count }} flags — under review</span>{% endif %}
+  <p class="muted">{{ cp.category }} · {{ cp.address or 'no address' }} · {{ dt(cp.created_at) }}
+    {% if cp.linked_project_id %} · <a href="{{ url_for('public.project_page', pid=cp.linked_project_id) }}">linked project</a>{% endif %}</p>
+  <a href="{{ url_for('public.citizen_report_page', cid=cp.id) }}">View / respond thread</a>
+  {% if current_user_obj and current_user_obj.role == 'citizen' %}
+  <form method="post" action="{{ url_for('citizen.flag_report', cid=cp.id) }}" style="display:inline">
+    <button class="secondary" type="submit">Flag as spam/false</button></form>
+  {% endif %}
+</div>
+{% else %}<p class="muted">No citizen reports yet. <a href="{{ url_for('auth.signup_page') }}">Sign up</a> to file one.</p>{% endfor %}
+{% endblock %}
