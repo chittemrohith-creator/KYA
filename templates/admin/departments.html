@@ -2,6 +2,8 @@
 {% block title %}Manage Departments — Admin{% endblock %}
 {% block content %}
 <h1>Departments</h1>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% for d in departments %}<form method="post" class="card"><input type="hidden" name="department_id" value="{{ d.id }}"><label>Name</label><input name="name" value="{{ d.name }}" required><label>Slug</label><input name="slug" value="{{ d.slug }}" required><label>Description</label><textarea name="description">{{ d.description }}</textarea><label>Email</label><input name="contact_email" value="{{ d.contact_email }}"><label>Phone</label><input name="contact_phone" value="{{ d.contact_phone }}"><label>Office address</label><input name="office_address" value="{{ d.office_address }}"><button name="action" value="edit">Save department</button><button name="action" value="delete" formnovalidate onclick="return confirm('Delete this unreferenced department?')">Delete if unused</button></form>{% endfor %}
 <table><tr><th>Name</th><th>Slug</th><th>Description</th><th>Contact</th></tr>
 {% for d in departments %}<tr><td>{{ d.name }}</td><td>{{ d.slug }}</td><td>{{ d.description }}</td>
 <td>{{ d.contact_email }} · {{ d.contact_phone }}</td></tr>{% else %}
