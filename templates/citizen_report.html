@@ -10,6 +10,7 @@
   <p class="muted">{{ cp.category }} · {{ cp.address or 'no address' }} · filed {{ dt(cp.created_at) }}
     {% if cp.flagged_by|length > 0 %} · {{ cp.flag_count }} flag(s){% endif %}
     {% if cp.duplicate_suggested_post_id %} · linked to duplicate report #{{ cp.duplicate_suggested_post_id }}{% endif %}</p>
+  {% if cp.latitude is none or cp.longitude is none %}<p class="muted">Location: {{ cp.address }} (address only — not shown on the map)</p>{% else %}<p class="muted">Location: mapped</p>{% endif %}
   {% if cp.linked_project_id %}<p><a href="{{ url_for('public.project_page', pid=cp.linked_project_id) }}">Linked project #{{ cp.linked_project_id }}</a></p>{% endif %}
 </div>
 <h2>Official responses</h2>
