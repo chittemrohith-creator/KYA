@@ -229,6 +229,9 @@ def seed_demo(app, dept_map=None):
 
 # ------------------------------------------------------------------ app factory
 def create_app(test_config=None):
+    # Fail closed: public hosting is not supported until the security checklist is completed.
+    if os.environ.get("CIVICSYNC_ENV", "development").lower() == "production":
+        raise RuntimeError("Public launch blocked: real SMS OTP, CSRF/rate limiting, secure provisioning and production security review are required. See LAUNCH.md.")
     app = Flask(__name__)
     app.config.update(
         SECRET_KEY=os.environ.get("CIVICSYNC_SECRET", "dev-login-secret"),
@@ -242,6 +245,8 @@ def create_app(test_config=None):
     from .bootstrap import configure_app_paths
     configure_app_paths(app)  # templates/ and static/ live at the repository root
     set_app_secret(app.config["APP_SECRET"])
+    app.config.setdefault("UPLOAD_FOLDER", os.path.join(app.root_path, "uploads"))
+    app.config.setdefault("MAX_CONTENT_LENGTH", 6 * 1024 * 1024)
     db.init_app(app)
 
     from . import views_public, views_auth, views_employee, views_chairman, views_admin, views_citizen, api
@@ -252,6 +257,24 @@ def create_app(test_config=None):
     app.register_blueprint(views_admin.bp)
     app.register_blueprint(views_citizen.bp)
     app.register_blueprint(api.bp)
+
+    @app.route("/media/<name>")
+    def media(name):
+        import re
+        from flask import abort, send_from_directory
+        from .models import ProjectPhoto
+        if not re.fullmatch(r"[a-f0-9]{32}\.jpg", name):
+            abort(404)
+        photo = ProjectPhoto.query.filter_by(photo_url="/media/" + name).first()
+        if not photo:
+            abort(404)
+        p = photo.project
+        u = current_user()
+        if p.status not in ("approved", "in_progress", "delayed", "completed", "verified_complete") and not (u and u.status == "active" and (u.role in ("chairman", "admin") or u.department_id == p.department_id)):
+            abort(404)
+        response = send_from_directory(app.config["UPLOAD_FOLDER"], name, mimetype="image/jpeg")
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
 
     @app.context_processor
     def inject_globals():
