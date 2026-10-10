@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs — Chairman{% endblock %}
+{% block content %}
+<h1>Audit trail (append-only)</h1>
+<form method="get" class="card"><label>Filter by action</label><input name="action" value="{{ q }}"><button>Search</button>
+<a class="btn secondary" href="{{ url_for('chairman.audit_export') }}">Export CSV</a></form>
+<table>
+  <tr><th>When (UTC)</th><th>User</th><th>Role</th><th>Action</th><th>Target</th><th>Metadata</th><th>IP</th></tr>
+  {% for l in logs %}
+  <tr><td>{{ dt(l.created_at) }}</td><td>{{ l.user_id or 'system' }}</td><td>{{ l.role }}</td>
+      <td>{{ l.action }}</td><td>{{ l.target_type }}{% if l.target_id %} #{{ l.target_id }}{% endif %}</td>
+      <td class="muted">{{ l.metadata_json }}</td><td>{{ l.ip_address }}</td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No audit entries.</td></tr>{% endfor %}
+</table>
+{% endblock %}
