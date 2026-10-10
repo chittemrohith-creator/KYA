@@ -42,41 +42,78 @@ def home():
 
 @bp.route("/map")
 def map_page():
-    return render_template("map.html")
+    return render_template("map.html", departments=Department.query.order_by(Department.name).all())
 
 
 @bp.route("/api/mapdata")
 def map_data():
-    """Pins: official projects (green), citizen reports (blue), conflicts (orange), coordinated work (purple)."""
+    """Public pins with consistent layer, department, status, ward and search filters."""
+    import math
+    kind = request.args.get("kind", "").strip()
+    department = request.args.get("department", "").strip().lower()
+    status = request.args.get("status", "").strip().lower()
+    ward = request.args.get("ward", "").strip().lower()
+    query = request.args.get("q", "").strip().lower()
     pins = []
+
+    def add(pin, projects=(), search_text=""):
+        if pin.get("lat") is None or pin.get("lng") is None:
+            return
+        if not math.isfinite(pin["lat"]) or not math.isfinite(pin["lng"]) or not -90 <= pin["lat"] <= 90 or not -180 <= pin["lng"] <= 180:
+            return
+        citizen = pin["kind"] == "citizen_report"
+        if kind == "official" and citizen or kind == "citizen" and not citizen:
+            return
+        if kind and kind not in ("official", "citizen") and pin["kind"] != kind:
+            return
+        # Related metadata is restricted to projects already publicly visible.
+        related = [p for p in projects if p and p.status in PUBLIC_PROJECT_STATUSES]
+        if department and not any(department in (p.department.slug.lower(), p.department.name.lower()) for p in related):
+            return
+        if status and pin.get("status", "").lower() != status:
+            return
+        if ward and not any((p.ward or "").lower() == ward for p in related):
+            return
+        haystack = " ".join([pin.get("title", ""), pin.get("department", ""), search_text] + [" ".join(filter(None, [p.title, p.description, p.road_name, p.ward, p.contractor_name, p.department.name])) for p in related]).lower()
+        if query and query not in haystack:
+            return
+        pins.append(pin)
+
     for p in _visible_projects():
-        label = "⚠️ Delayed" if p.status == "delayed" else None
-        color = "green"
-        pins.append({"kind": "project", "color": color, "id": p.id, "title": p.title,
-                     "lat": p.latitude, "lng": p.longitude,
-                     "status": p.status, "department": p.department.name,
-                     "badge": f"✅ Verified Official — {p.department.name}",
-                     "delayed_label": ("⚠️ Delayed — Reason Pending" if p.unexplained_delay else
-                                       "⚠️ Delayed" if p.status == "delayed" else None)})
+        add({"kind": "project", "color": "green", "id": p.id, "title": p.title,
+             "lat": p.latitude, "lng": p.longitude, "status": p.status,
+             "department": p.department.name, "department_slug": p.department.slug,
+             "ward": p.ward or "", "badge": f"✅ Verified Official — {p.department.name}",
+             "delayed_label": "⚠️ Delayed — Reason Pending" if p.unexplained_delay else "⚠️ Delayed" if p.status == "delayed" else None}, [p])
     for cp in CitizenPost.query.filter_by(status="published").all():
-        if cp.latitude is None or cp.longitude is None:
+        linked = db.session.get(Project, cp.linked_project_id) if cp.linked_project_id else None
+        add({"kind": "citizen_report", "color": "blue", "id": cp.id,
+             "title": cp.body[:70], "lat": cp.latitude, "lng": cp.longitude,
+             "status": cp.status, "department": "", "badge": "👤 Citizen — Phone Verified"},
+            [linked] if linked else [], cp.body + " " + (cp.address or ""))
+    for conflict in Conflict.query.filter(Conflict.status.in_(["open", "escalated"])).all():
+        a, b = conflict.project_a, conflict.project_b
+        # Never leak a pending/draft title through a public conflict pin.
+        if not a or not b:
             continue
-        pins.append({"kind": "citizen_report", "color": "blue", "id": cp.id,
-                     "title": cp.body[:70], "lat": cp.latitude, "lng": cp.longitude,
-                     "status": cp.status, "department": "", "badge": "👤 Citizen — Phone Verified"})
-    for c in Conflict.query.filter(Conflict.status.in_(["open", "escalated"])).all():
-        a = c.project_a
-        pins.append({"kind": "conflict", "color": "orange", "id": c.id,
-                     "title": f"⚠️ Conflict: {a.title} vs {c.project_b.title} ({c.severity})",
-                     "lat": a.latitude, "lng": a.longitude})
+        visible = [p for p in (a, b) if p.status in PUBLIC_PROJECT_STATUSES]
+        if not visible:
+            continue
+        a = visible[0]
+        public_title = " vs ".join(p.title for p in visible)
+        add({"kind": "conflict", "color": "orange", "id": conflict.id,
+             "title": f"⚠️ Conflict: {public_title} ({conflict.severity})",
+             "lat": a.latitude, "lng": a.longitude, "status": conflict.status}, [a, b])
     for js in JointSchedule.query.filter_by(status="approved").all():
-        first = db.session.get(Project, js.project_ids[0]) if js.project_ids else None
-        if first:
-            depts = "+".join(db.session.get(Department, did).name for did in js.department_ids)
-            pins.append({"kind": "joint", "color": "purple", "id": js.id,
-                         "title": f"🤝 Coordinated Work — {js.location} ({depts})",
-                         "lat": first.latitude, "lng": first.longitude})
-    pins = [p for p in pins if p.get("lat") is not None and p.get("lng") is not None and __import__("math").isfinite(p["lat"]) and __import__("math").isfinite(p["lng"]) and -90 <= p["lat"] <= 90 and -180 <= p["lng"] <= 180]
+        projects = [db.session.get(Project, pid) for pid in js.project_ids or []]
+        projects = [p for p in projects if p and p.status in PUBLIC_PROJECT_STATUSES]
+        if not projects:
+            continue
+        first = projects[0]
+        names = "+".join(sorted({p.department.name for p in projects}))
+        add({"kind": "joint", "color": "purple", "id": js.id,
+             "title": f"🤝 Coordinated Work — {js.location} ({names})",
+             "lat": first.latitude, "lng": first.longitude, "status": js.status}, projects)
     return {"pins": pins}
 
 
