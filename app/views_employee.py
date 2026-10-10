@@ -105,12 +105,12 @@ def project_detail(pid):
                     raise BusinessRuleError("Completion requires progress 100% and a completion note.")
                 if p.status == "delayed" and not p.delay_reason:
                     raise BusinessRuleError("Publish a delay reason before completing delayed work.")
-                upload = request.files.get("photo")
+                upload = request.files.get("photo") or request.files.get("photo_file")
                 if upload and upload.filename:
                     from .uploads import save_image
                     photo_url = save_image(upload)
                     db.session.add(ProjectPhoto(project_id=p.id, photo_url=photo_url,
-                                                kind="completion", caption="Completion photo",
+                                                kind="completion", caption=request.form.get("caption", "Completion photo")[:300],
                                                 uploaded_by=u.id))
                     db.session.flush()
                     services.audit("project.photo_uploaded", u, "project", p.id, metadata={"photo_url": photo_url}, request=request)
