@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — CivicSync{% endblock %}
+{% block content %}
+<h1>System Administrator</h1>
+<p class="muted">Maintenance role only. The Admin cannot approve projects, posts, or employees (rule 26) — that authority belongs to the Municipal Chairman.</p>
+<nav class="card">
+  <a href="{{ url_for('admin.departments') }}">Departments</a> ·
+  <a href="{{ url_for('admin.users') }}">Users</a> ·
+  <a href="{{ url_for('admin.seed') }}">Demo data</a> ·
+  <a href="{{ url_for('admin.system') }}">System health</a>
+</nav>
+<div class="kpi">
+  {% for k, v in counts.items() %}<div><b>{{ v }}</b>{{ k.replace('_',' ') }}</div>{% endfor %}
+</div>
+{% endblock %}
