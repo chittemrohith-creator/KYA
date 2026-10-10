@@ -1,4 +1,6 @@
 """System Administrator — maintenance only. Cannot approve official work (rule 26)."""
+import re
+from sqlalchemy import inspect
 from flask import Blueprint, redirect, render_template, request, url_for, abort, jsonify
 
 from .models import (
@@ -32,19 +34,48 @@ def dashboard():
 @bp.route("/departments", methods=["GET", "POST"])
 @admin_required
 def departments():
+    error = None
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        slug = request.form.get("slug", "").strip().lower().replace(" ", "-")
-        if name and slug and not Department.query.filter_by(slug=slug).first():
-            d = Department(name=name, slug=slug, description=request.form.get("description", ""),
-                           contact_email=request.form.get("contact_email", ""),
-                           contact_phone=request.form.get("contact_phone", ""))
-            db.session.add(d)
-            services.audit("department.created", current_user(), "department", None,
-                           metadata={"name": name}, request=request)
+        try:
+            action = request.form.get("action", "create")
+            did = request.form.get("department_id", type=int)
+            d = db.session.get(Department, did) if did else None
+            if action in ("edit", "delete") and not d:
+                abort(404)
+            if action == "delete":
+                # Check every scalar FK as well as JSON-held department references.
+                for mapper in db.Model.registry.mappers:
+                    for col in mapper.columns:
+                        if any(fk.target_fullname == "departments.id" for fk in col.foreign_keys):
+                            if db.session.query(mapper.class_).filter(col == d.id).first():
+                                raise BusinessRuleError("Department is referenced and cannot be deleted.")
+                if any(d.id in (m.to_department_ids or []) for m in CoordinationMessage.query.all()) or any(d.id in (j.department_ids or []) or d.id in (j.no_show_departments or []) for j in JointSchedule.query.all()):
+                    raise BusinessRuleError("Department has coordination references and cannot be deleted.")
+                services.audit("department.deleted", current_user(), "department", d.id, metadata={"name": d.name}, request=request)
+                db.session.delete(d)
+            elif action in ("create", "edit"):
+                name = request.form.get("name", "").strip()
+                slug = request.form.get("slug", "").strip().lower()
+                if not name or len(name) > 120 or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug) or len(slug) > 120:
+                    raise BusinessRuleError("Name and valid lowercase slug are required.")
+                if Department.query.filter((Department.name == name) | (Department.slug == slug)).filter(Department.id != (d.id if d else -1)).first():
+                    raise BusinessRuleError("Name or slug already exists.")
+                if d is None:
+                    d = Department()
+                    db.session.add(d)
+                d.name, d.slug = name, slug
+                for field in ("description", "contact_email", "contact_phone", "office_address"):
+                    setattr(d, field, request.form.get(field, ""))
+                db.session.flush()
+                services.audit("department." + ("created" if action == "create" else "updated"), current_user(), "department", d.id, request=request)
+            else:
+                raise BusinessRuleError("Unknown action.")
             db.session.commit()
-        return redirect(url_for("admin.departments"))
-    return render_template("admin/departments.html", departments=Department.query.all())
+            return redirect(url_for("admin.departments"))
+        except BusinessRuleError as exc:
+            db.session.rollback()
+            error = str(exc)
+    return render_template("admin/departments.html", departments=Department.query.all(), error=error)
 
 
 @bp.route("/users")
