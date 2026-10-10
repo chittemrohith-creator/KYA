@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Citizen Dashboard — CivicSync{% endblock %}
+{% block content %}
+<h1>Citizen dashboard</h1>
+<p class="muted">👤 Citizen — Phone Verified. Your phone number is never displayed anywhere.</p>
+<nav class="card">
+  <a href="{{ url_for('citizen.reports') }}">File / manage reports</a> ·
+  <a href="{{ url_for('citizen.subscriptions') }}">Ward &amp; category alerts</a> ·
+  <a href="{{ url_for('citizen.notifications') }}">Notifications</a> ·
+  <a href="{{ url_for('citizen.profile') }}">Profile</a>
+</nav>
+<div class="kpi"><div><b>{{ reports|length }}</b>my reports</div><div><b>{{ subs|length }}</b>alert subscriptions</div></div>
+<h2>My recent reports</h2>
+{% for cp in reports %}
+<div class="card"><p>{{ cp.body[:200] }}</p>
+<span class="status">{{ cp.status }}</span>
+{% if cp.flag_count %}<span class="badge conflict">{{ cp.flag_count }} flag(s)</span>{% endif %}
+<a href="{{ url_for('public.citizen_report_page', cid=cp.id) }}">Public thread</a>
+<p class="muted">{{ cp.category }} · {{ dt(cp.created_at) }}</p></div>
+{% else %}<p class="muted">No reports yet — <a href="{{ url_for('citizen.reports') }}">file your first one</a>.</p>{% endfor %}
+<h2>Notifications</h2>
+{% for n in notifications %}<div class="card"><b>{{ n.title }}</b><p>{{ n.body }}</p><p class="muted">{{ dt(n.created_at) }}</p></div>
+{% else %}<p class="muted">Nothing yet.</p>{% endfor %}
+{% endblock %}

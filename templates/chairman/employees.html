@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Employee Verification — Chairman{% endblock %}
+{% block content %}
+<h1>Employee verification queue</h1>
+<p class="muted">Only the Chairman approves or rejects employee registrations (rule 4). Reasons are mandatory for rejections.</p>
+<h2>Pending ({{ pending|length }})</h2>
+{% for e in pending %}
+<div class="card">
+  <b>{{ e.full_name }}</b> <span class="muted">{{ e.employee_code }} · {{ e.department.name }} · {{ e.designation }} · {{ e.email }}</span>
+  <span class="status">{{ e.status }}</span>
+  <form method="post" action="{{ url_for('chairman.approve_employee', uid=e.id) }}" style="display:inline"><button>Approve</button></form>
+  <form method="post" action="{{ url_for('chairman.reject_employee', uid=e.id) }}" style="display:inline">
+    <input name="reason" placeholder="Rejection reason *" required style="width:auto;display:inline-block"><button class="secondary">Reject</button></form>
+</div>
+{% else %}<p class="muted">No pending verifications.</p>{% endfor %}
+<h2>All staff</h2>
+<table><tr><th>Name</th><th>Code</th><th>Department</th><th>Status</th><th>Suspend</th></tr>
+{% for e in allstaff %}
+<tr><td>{{ e.full_name }}</td><td>{{ e.employee_code }}</td><td>{{ e.department.name }}</td>
+<td><span class="status">{{ e.status }}</span>{% if e.rejection_reason %} <em class="muted">({{ e.rejection_reason }})</em>{% endif %}</td>
+<td>{% if e.status == 'active' %}
+<form method="post" action="{{ url_for('chairman.suspend_employee', uid=e.id) }}">
+<input name="reason" placeholder="reason" style="width:auto;display:inline-block"><button class="secondary">Suspend</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="5" class="muted">No staff registered.</td></tr>{% endfor %}</table>
+{% endblock %}

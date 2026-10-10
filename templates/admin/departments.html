@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Manage Departments — Admin{% endblock %}
+{% block content %}
+<h1>Departments</h1>
+<table><tr><th>Name</th><th>Slug</th><th>Description</th><th>Contact</th></tr>
+{% for d in departments %}<tr><td>{{ d.name }}</td><td>{{ d.slug }}</td><td>{{ d.description }}</td>
+<td>{{ d.contact_email }} · {{ d.contact_phone }}</td></tr>{% else %}
+<tr><td colspan="4" class="muted">No departments.</td></tr>{% endfor %}</table>
+<form method="post" class="card">
+  <h2>Create department</h2>
+  <label>Name *</label><input name="name" required>
+  <label>Slug * (unique, lowercase)</label><input name="slug" required>
+  <label>Description</label><textarea name="description"></textarea>
+  <label>Contact email</label><input name="contact_email" type="email">
+  <label>Office phone</label><input name="contact_phone">
+  <button>Create</button>
+</form>
+{% endblock %}

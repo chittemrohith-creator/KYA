@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}Projects — CivicSync{% endblock %}
+{% block content %}
+<h1>Public projects</h1>
+<form method="get" class="card">
+  <label>Search (title, road, ward, contractor)</label>
+  <input id="searchbox" name="q" value="{{ q }}" placeholder="e.g. MG Road">
+  <div id="autocomplete"></div>
+  <label>Department</label>
+  <select name="department">
+    <option value="">All departments</option>
+    {% for d in departments %}<option value="{{ d.slug }}" {% if dept_slug==d.slug %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+  </select>
+  <label>Status</label>
+  <select name="status">
+    <option value="">Any status</option>
+    {% for s in ['approved','in_progress','delayed','completed','verified_complete'] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <label>Ward</label><input name="ward" value="{{ ward }}" placeholder="e.g. Ward 10">
+  <button type="submit">Filter</button>
+</form>
+{% if projects %}<div class="grid">{% for p in projects %}{{ m.project_card(p) }}{% endfor %}</div>
+{% else %}<p class="muted">No projects match these filters.</p>{% endif %}
+{% endblock %}

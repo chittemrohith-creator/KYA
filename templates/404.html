@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Not found — CivicSync{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>404 — Page or item not found</h1>
+  <p class="muted">Drafts and unapproved items are private and do not appear publicly.</p>
+  <a href="{{ url_for('public.projects_list') }}">Browse public projects</a>
+</div>
+{% endblock %}

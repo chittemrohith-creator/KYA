@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Profile — CivicSync{% endblock %}
+{% block content %}
+<h1>My profile</h1>
+<div class="card">
+  <p>Name shown publicly: <b>{{ u.display_name or 'Anonymous Verified Citizen' }}</b></p>
+  <p>Phone: <b>{{ masked_phone }}</b> <span class="muted">(masked — full numbers are never displayed, even to you)</span></p>
+  <p class="muted">Status: {{ u.status }} · 👤 Citizen — Phone Verified</p>
+</div>
+<form method="post" class="card">
+  <label>Display name</label><input name="display_name" value="{{ u.display_name or '' }}">
+  <button>Save</button>
+</form>
+{% endblock %}

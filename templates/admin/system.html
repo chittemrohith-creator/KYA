@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}System — Admin{% endblock %}
+{% block content %}
+<h1>System health</h1>
+<table>
+  {% for k, v in health.items() %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}
+</table>
+<p class="muted">Audit log is append-only: no update/delete endpoints are exposed.</p>
+{% endblock %}

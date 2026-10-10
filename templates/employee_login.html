@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Official Login — CivicSync{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px">
+  <h1>Department official login</h1>
+  <p class="muted">Chairman, System Admin, and verified employees log in here. Pending accounts cannot access the workspace until Chairman approval.</p>
+  <div id="msg"></div>
+  <label>Employee code</label><input id="code" placeholder="e.g. RD-1001">
+  <label>Password</label><input id="password" type="password">
+  <button id="login">Log in</button>
+  <p class="muted">Not registered? <a href="{{ url_for('auth.employee_register_page') }}">Register as a department employee</a>.</p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("login").onclick=async()=>{
+  const r=await fetch("/api/login/employee",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({employee_code:document.getElementById("code").value.trim(),password:document.getElementById("password").value})});
+  const j=await r.json();
+  if(j.error){document.getElementById("msg").innerHTML='<div class="error">'+j.error+'</div>';return;}
+  window.location=j.redirect;
+};
+</script>
+{% endblock %}

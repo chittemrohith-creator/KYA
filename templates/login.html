@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Citizen Login — CivicSync{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px">
+  <h1>Citizen login</h1>
+  <p class="muted">Phone-verified citizens log in with an OTP. No SMS gateway is configured in this local build, so the demo OTP is shown on screen.</p>
+  <div id="msg"></div>
+  <label>Phone (with country code, e.g. +919888888888)</label>
+  <input id="phone" placeholder="+91…">
+  <button id="sendotp">Send OTP</button>
+  <div id="otpwrap" style="display:none">
+    <label>Enter 6-digit OTP</label><input id="otp" maxlength="6">
+    <button id="verifyotp">Verify & log in</button>
+  </div>
+  <p class="muted">New here? <a href="{{ url_for('auth.signup_page') }}">Sign up as a citizen</a> · Officials use <a href="{{ url_for('auth.employee_login_page') }}">Official Login</a>.</p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function postJSON2(url, data){ const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}); return {status:r.status, body:await r.json()}; }
+const msg=document.getElementById("msg");
+document.getElementById("sendotp").onclick=async()=>{
+  const j=await postJSON2("/api/login/citizen",{phone:document.getElementById("phone").value.trim()});
+  if(j.body.error){msg.innerHTML='<div class="error">'+j.body.error+'</div>';return;}
+  msg.innerHTML='<div class="ok">'+j.body.message+' Demo OTP: <b>'+j.body.demo_otp+'</b></div>';
+  document.getElementById("otpwrap").style.display="block";
+};
+document.getElementById("verifyotp").onclick=async()=>{
+  const j=await postJSON2("/api/login/citizen/verify",{otp:document.getElementById("otp").value.trim()});
+  if(j.body.error){msg.innerHTML='<div class="error">'+j.body.error+'</div>';return;}
+  window.location=j.body.redirect;
+};
+</script>
+{% endblock %}

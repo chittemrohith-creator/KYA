@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Alerts — CivicSync{% endblock %}
+{% block content %}
+<h1>Ward &amp; category alerts</h1>
+<form method="post" class="card">
+  <label>Ward (e.g. Ward 10)</label><input name="ward">
+  <label>Category</label>
+  <select name="category"><option value="">Any</option>
+    {% for c in ['road','drainage','water','electricity','telecom','sewer','other'] %}<option value="{{ c }}">{{ c }}</option>{% endfor %}</select>
+  <button>Subscribe</button>
+</form>
+<h2>My subscriptions</h2>
+{% for s in subs %}
+<div class="card">{{ s.ward or 'any ward' }} · {{ s.category or 'any category' }}
+<form method="post" action="{{ url_for('citizen.delete_subscription', sid=s.id) }}"><button class="secondary">Unsubscribe</button></form></div>
+{% else %}<p class="muted">No subscriptions yet.</p>{% endfor %}
+{% endblock %}

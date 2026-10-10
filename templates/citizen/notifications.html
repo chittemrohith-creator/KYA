@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Notifications — CivicSync{% endblock %}
+{% block content %}
+<h1>Notifications</h1>
+{% for n in notifications %}<div class="card"><b>{{ n.title }}</b><p>{{ n.body }}</p><p class="muted">{{ dt(n.created_at) }}</p></div>
+{% else %}<p class="muted">No notifications.</p>{% endfor %}
+{% endblock %}

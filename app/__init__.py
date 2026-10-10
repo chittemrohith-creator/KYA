@@ -217,6 +217,8 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
+    from .bootstrap import configure_app_paths
+    configure_app_paths(app)  # templates/ and static/ live at the repository root
     set_app_secret(app.config["APP_SECRET"])
     db.init_app(app)
 
