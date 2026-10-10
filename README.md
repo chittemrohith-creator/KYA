@@ -205,3 +205,10 @@ layered rounded cards and a CSS/SVG isometric hero on the homepage. All styling 
   offline failure messages; tiles require internet, filters/pins degrade cleanly without it.
 - Verified by `tests/test_redesign_ui.py` (hero/CTAs, real-data metrics, theme tokens, reduced-motion,
   auth-page form ids preserved, map wiring preserved).
+
+
+## Recovered Qwen workflow continuation (10 October 2026)
+
+The saved Qwen feature tests were recovered from commit `2057a721249d7be75b8cad3beacae6c358d42dbf` and integrated selectively on verified main, rather than replacing the application. The final local suite passes 113 tests; all 51 templates compile. Map API filters now support layer, department, status, ward and search; the browser controls use the same API. Address-only reports retain NULL coordinates and explicit labels. Department deletion is audited and refuses referenced rows; the legacy delete route retains administrator authorization. Safe Pillow decoding and random JPEG media names remain in use. Recovered tests were adapted to genuine image fixtures/current media routes and to the requirement that delay reasons become public only after Chairman approval.
+
+The homepage city uses a shared 2:1 isometric grid with road lanes below building footprints and unified scene motion. Desktop homepage, map layer selection and heatmap rendering were checked in a real browser. Full mobile/accessibility E2E remains unverified. Public launch is still blocked by LAUNCH.md; this work does not add production SMS or bypass the launch guard.
