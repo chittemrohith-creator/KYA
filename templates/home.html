@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}CivicSync — Public works, in the open{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Municipal public works — coordinated in the open</h1>
+  <p>Verified departments plan and negotiate publicly. Every official post and project requires Municipal Chairman approval. Citizens report issues with phone-verified identity.</p>
+  <div class="kpi">
+    <div><b>{{ projects|length }}</b>featured projects</div>
+    <div><b>{{ conflict_count }}</b>open conflicts</div>
+    <div><b>{{ joint_count }}</b>approved joint schedules</div>
+    <div><b>{{ departments|length }}</b>departments</div>
+  </div>
+</div>
+
+<h2>Featured projects</h2>
+{% if projects %}<div class="grid">{% for p in projects %}{{ m.project_card(p) }}{% endfor %}</div>
+{% else %}<p class="muted">No public projects yet.</p>{% endif %}
+
+<div class="grid">
+  <div>
+    <h2>Latest official posts</h2>
+    {% for post in posts %}
+      <div class="card"><h3>{{ post.title }}</h3>
+        <p>{{ post.body[:200] }}</p>
+        <span class="badge official">✅ Verified Official — {{ post.department.name }}</span>
+        <p class="muted">Approved {{ dt(post.approved_at) }}</p></div>
+    {% else %}<p class="muted">No published official posts yet.</p>{% endfor %}
+  </div>
+  <div>
+    <h2>Recent citizen reports</h2>
+    {% for r in reports %}
+      <div class="card"><p>{{ r.body[:140] }}</p>
+        <a href="{{ url_for('public.citizen_report_page', cid=r.id) }}">View report #{{ r.id }}</a>
+        <span class="badge citizen">👤 Citizen — Phone Verified</span></div>
+    {% else %}<p class="muted">No citizen reports yet.</p>{% endfor %}
+  </div>
+</div>
+<p><a href="{{ url_for('public.map_page') }}">Open the live map</a> · <a href="{{ url_for('public.coordination') }}">Coordination Hub</a></p>
+{% endblock %}
