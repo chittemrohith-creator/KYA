@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin{% endblock %}
+{% block content %}
+<h1>All users</h1>
+<p class="muted">Phones are stored encrypted; the last 4 digits of the hash reference are shown for support only. Full numbers are never displayed.</p>
+<table>
+  <tr><th>ID</th><th>Role</th><th>Name</th><th>Code/Phone ref</th><th>Status</th><th>Chairman transfer</th></tr>
+  {% for u in users %}
+  <tr><td>{{ u.id }}</td><td>{{ u.role }}</td><td>{{ u.full_name or u.display_name or '—' }}</td>
+      <td>{{ u.employee_code or (u.phone_hash[:8] ~ '…' if u.phone_hash else '—') }}</td>
+      <td><span class="status">{{ u.status }}</span></td>
+      <td>{% if u.role == 'dept_head' or u.role == 'employee' %}
+        <form method="post" action="{{ url_for('admin.transfer_chairman', uid=u.id) }}" onsubmit="return confirm('Temporarily transfer approval authority to this user? This is logged.');">
+          <button class="secondary">Transfer Chairman authority</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">No users.</td></tr>{% endfor %}
+</table>
+{% endblock %}
