@@ -1,4 +1,5 @@
 # CivicSync runtime dependencies (derived from actual imports in app/*.py)
 Flask==3.1.1            # app factory, blueprints, templates (app/__init__.py and all view modules)
 Flask-SQLAlchemy==3.1.1 # db layer (app/models.py: from flask_sqlalchemy import SQLAlchemy)
+Pillow>=11.3,<13          # validated raster uploads
 bcrypt==4.2.1           # password + OTP hashing (app/services.py: import bcrypt)
