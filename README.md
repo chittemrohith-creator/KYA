@@ -16,47 +16,33 @@ Built with Flask + SQLAlchemy (SQLite by default). Server-rendered Jinja templat
 
 ## Quick start — Windows (PowerShell)
 
+Install Python 3.12 and Git first. Run these commands in PowerShell:
+
 ```powershell
-# 1. Clone
 git clone https://github.com/chittemrohith-creator/KYA.git
 cd KYA
-
-# 2. Create and activate a virtual environment
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-# If activation is blocked, run once:
-#   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# 3. Install dependencies
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-
-# 4. Start the development server
-python run.py
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe run.py
 ```
 
-Then open **http://127.0.0.1:5001** in a browser. Stop with `Ctrl+C`.
+No environment activation or permanent execution-policy change is required. If `python` is not found but the Windows Python launcher is installed, use `py -3.12 -m venv .venv` instead.
+
+Open **http://127.0.0.1:5001**. Stop with `Ctrl+C`. After setup, start again with `.\start-demo.cmd`. To use another port, run `.\start-demo.cmd -Port 5002`. This wrapper relaxes script policy only for its own PowerShell process, not your system settings. To run the PowerShell launcher directly, use `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-demo.ps1 -Port 5002`.
+
+If you already have a clone, use `git pull --ff-only` from its folder instead of cloning again; do not overwrite local work.
 
 ## Quick start — macOS / Linux
 
 ```bash
-# 1. Clone
 git clone https://github.com/chittemrohith-creator/KYA.git
 cd KYA
-
-# 2. Create and activate a virtual environment
 python3 -m venv .venv
-source .venv/bin/activate
-
-# 3. Install dependencies
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-
-# 4. Start the development server
-python run.py
+./.venv/bin/python -m pip install -r requirements.txt
+./.venv/bin/python run.py
 ```
 
-Open **http://127.0.0.1:5001**. The server binds to `127.0.0.1:5001` only (see `run.py`) — it is a development server, not a public deployment.
+Open **http://127.0.0.1:5001**. No activation is required. The server binds to localhost only; this is a development demo, not a public deployment.
 
 ---
 
@@ -77,7 +63,7 @@ Examples:
 $env:CIVICSYNC_SECRET = "a-long-random-string"
 $env:CIVICSYNC_DATA_SECRET = "another-long-random-string"
 $env:CIVICSYNC_DB = "sqlite:///C:/tmp/civicsync-dev.db"
-python run.py
+.\.venv\Scripts\python.exe run.py
 ```
 
 ```bash
@@ -148,8 +134,8 @@ python -m pytest tests/ -q
 PowerShell equivalent:
 
 ```powershell
-pip install -r requirements-dev.txt
-python -m pytest tests\ -q
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest tests\ -q
 ```
 
 The suite (`tests/test_smoke_public.py`, `tests/test_smoke_auth_roles.py`) runs against an **isolated temporary SQLite database per test** (`tmp_path` fixture + `TESTING_SEED_MINIMAL` where appropriate) via Flask's test client. It never touches `civicsync.db` and sends no SMS/OTP messages. Coverage: app creation/seeding, all public pages render without missing-template errors, static CSS/JS served, `/api/mapdata` JSON shape and pin colors, staff login (Chairman/Admin/employee), pending-account rejection, role dashboards, anonymous and wrong-role access denial/redirect, API RBAC, and the citizen OTP signup flow using the returned `demo_otp`.
@@ -158,9 +144,9 @@ The suite (`tests/test_smoke_public.py`, `tests/test_smoke_auth_roles.py`) runs 
 
 ## Troubleshooting
 
-- **`Address already in use` on port 5001** — something else holds the port (macOS AirPlay Receiver uses 5001). Edit the `port=` value in `run.py` or free the port (`Get-NetTCPConnection -LocalPort 5001` / `lsof -i :5001`).
-- **PowerShell: "cannot be loaded because running scripts is disabled"** — activate failed; run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` once, then re-activate.
-- **`ModuleNotFoundError: flask`** — the venv isn't activated; `pip list` should show Flask. Re-run the activation command for your OS.
+- **`Address already in use` on port 5001** — something else holds the port Select another port with `.\start-demo.cmd -Port 5002`, or free the port (`Get-NetTCPConnection -LocalPort 5001` / `lsof -i :5001`).
+- **PowerShell script policy blocks the launcher** — use `.\start-demo.cmd` or run `.\.venv\Scripts\python.exe run.py` directly. Activation is not needed.
+- **`ModuleNotFoundError: flask`** — install requirements using the repository interpreter: `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`.
 - **Stale/broken data after changing `CIVICSYNC_DATA_SECRET`** — phone hashes were computed with the old key. Delete `civicsync.db` and restart to reseed.
 - **Reset the demo** — stop the server, delete `civicsync.db` (repo root), start again; everything reseeds automatically.
 - **Windows CRLF noise in git diffs** — optional: `git config core.autocrlf true`.
@@ -183,9 +169,9 @@ requirements.txt / requirements-dev.txt
 
 This is a separate local copy; the original source and original demo database were not modified. No public deployment or external geocoding is performed.
 
-From this folder on Windows, run `start-demo.cmd` (or `powershell -ExecutionPolicy Bypass -File .\start-demo.ps1`). It uses the sibling `demo-venv` and defaults to http://127.0.0.1:5001 so an existing demo on 5001 is not interrupted. Pass `-Port 5002` to select another port. It creates its own civicsync.db on first launch. Install dependencies with `uv pip install --python ..\demo-venv\Scripts\python.exe -r requirements.txt -r requirements-dev.txt` if required.
+From the repository folder on Windows, run `start-demo.cmd` after creating `.venv` and installing `requirements.txt` as shown above. It uses this repository's `.venv` and defaults to http://127.0.0.1:5001. Use `-Port 5002` if another server occupies that port. It creates a local civicsync.db on first launch.
 
-Run tests: `..\demo-venv\Scripts\python.exe -m pytest -q`. Each test uses a separate temporary database.
+Run tests: `.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt`, then `.\.venv\Scripts\python.exe -m pytest tests/ -q`. Each test uses a separate temporary database.
 
 Citizen reports accept an address / landmark without coordinates; these reports remain visible in the feed, but do not appear on a map. Alternatively click the report map and drag the marker. Coordinate fields are hidden, optional and validated for paired, finite values in range. No guessed coordinates or geocoding are used.
 
