@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Departments — CivicSync{% endblock %}
+{% block content %}
+<h1>Departments</h1>
+<div class="grid">
+{% for d in departments %}
+  <div class="card"><h3><a href="{{ url_for('public.department_page', slug=d.slug) }}">{{ d.name }}</a></h3>
+    <p class="muted">{{ d.description }}</p>
+    <p class="muted">Office contact: {{ d.contact_phone }}</p></div>
+{% else %}<p class="muted">No departments configured.</p>{% endfor %}
+</div>
+{% endblock %}
