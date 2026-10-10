@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Conflicts — Chairman{% endblock %}
+{% block content %}
+<h1>Detected conflicts</h1>
+<p class="muted">Unresolved conflicts escalate automatically after 72 hours (rule 15).</p>
+{% for c in conflicts %}
+<div class="card">
+  <b>{{ c.project_a.title }}</b> ({{ c.project_a.department.name }}) vs <b>{{ c.project_b.title }}</b> ({{ c.project_b.department.name }})
+  <span class="badge conflict">{{ c.severity }}</span> <span class="status">{{ c.status }}</span>
+  <p class="muted">{{ c.distance_meters }} m apart · date overlap: {{ c.date_overlap }} · created {{ dt(c.created_at) }}</p>
+  {% if c.resolution %}<p>Resolution: {{ c.resolution }} (by audit user #{{ c.resolved_by }}, {{ dt(c.resolved_at) }})</p>{% endif %}
+  {% if c.status in ('open', 'escalated') %}
+  <form method="post" action="{{ url_for('chairman.resolve_conflict', cidx=c.id) }}">
+    <select name="decision"><option value="joint">Approve joint work</option><option value="delay">Delay one project</option><option value="reroute">Reroute / rescope</option><option value="cancel">Cancel conflicting project</option></select>
+    <input name="resolution" placeholder="Resolution note *" required style="width:auto;display:inline-block">
+    <button>Resolve</button></form>
+  {% endif %}
+</div>
+{% else %}<p class="muted">No conflicts detected.</p>{% endfor %}
+{% endblock %}
